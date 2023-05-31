@@ -24,6 +24,9 @@ class GridEnv:
         self.twoPinNet_i = 0
         self.route = []
         self.old_route = []
+        self.merge_i = 0
+        self.merge_num = 0
+        self.merge_route = []
         self.cost = 1000  # Large Enough
 
         self.episode = 0
@@ -62,6 +65,14 @@ class GridEnv:
             two_pin_set = []
 
         return two_pin_nets, two_pin_net_nums
+
+    def route_merger(self, two_pin_route, two_pin_cost):
+        self.merge_num += 1
+        if self.merge_num <= self.twoPinNetNums[self.merge_i]:
+            self.merge_route.append(two_pin_route)
+            if self.merge_num == self.twoPinNetNums[self.merge_i]:
+                self.merge_i += 1
+                self.merge_num = 0
 
     def add_occupied_coord(self):
         for i in range(len(self.route)):
