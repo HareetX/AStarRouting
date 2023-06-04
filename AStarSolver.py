@@ -2,6 +2,7 @@ import copy
 import heapq
 import os
 import random
+import time
 
 import numpy as np
 
@@ -53,11 +54,17 @@ class Item:
 
     def get_neighbors(self, occupied_msg, grid_size):
         x, y, z = self.cur_pos
+        direct = None
+        if self.parent is not None:
+            x_parent, y_parent, z_parent = self.parent.cur_pos
+            direct = [x - x_parent, y - y_parent, z - z_parent]
         neighbors = []
         # go to the east
         if x < grid_size[0] - 1:
             pos = [x + 1, y, z]
             g_cost = 0
+            if direct is not None and direct != [1, 0, 0]:
+                g_cost = 0.1  # bend cost
             if pos != self.end_pos and str(pos) in occupied_msg:
                 g_cost = occupied_msg[str(pos)]
             item = Item(pos, self.end_pos, self.g_score, g_cost + 1, self)
@@ -66,6 +73,8 @@ class Item:
         if x < grid_size[0] - 1 and y < grid_size[1] - 1:
             pos = [x + 1, y + 1, z]
             g_cost = 0
+            if direct is not None and direct != [1, 1, 0]:
+                g_cost = 0.1  # bend cost
             if pos != self.end_pos and str(pos) in occupied_msg:
                 g_cost = occupied_msg[str(pos)]
             item = Item(pos, self.end_pos, self.g_score, g_cost + 1.414, self)
@@ -74,6 +83,8 @@ class Item:
         if y < grid_size[1] - 1:
             pos = [x, y + 1, z]
             g_cost = 0
+            if direct is not None and direct != [0, 1, 0]:
+                g_cost = 0.1  # bend cost
             if pos != self.end_pos and str(pos) in occupied_msg:
                 g_cost = occupied_msg[str(pos)]
             item = Item(pos, self.end_pos, self.g_score, g_cost + 1, self)
@@ -82,6 +93,8 @@ class Item:
         if x > 0 and y < grid_size[1] - 1:
             pos = [x - 1, y + 1, z]
             g_cost = 0
+            if direct is not None and direct != [-1, 1, 0]:
+                g_cost = 0.1  # bend cost
             if pos != self.end_pos and str(pos) in occupied_msg:
                 g_cost = occupied_msg[str(pos)]
             item = Item(pos, self.end_pos, self.g_score, g_cost + 1.414, self)
@@ -90,6 +103,8 @@ class Item:
         if x > 0:
             pos = [x - 1, y, z]
             g_cost = 0
+            if direct is not None and direct != [-1, 0, 0]:
+                g_cost = 0.1  # bend cost
             if pos != self.end_pos and str(pos) in occupied_msg:
                 g_cost = occupied_msg[str(pos)]
             item = Item(pos, self.end_pos, self.g_score, g_cost + 1, self)
@@ -98,6 +113,8 @@ class Item:
         if x > 0 and y > 0:
             pos = [x - 1, y - 1, z]
             g_cost = 0
+            if direct is not None and direct != [-1, -1, 0]:
+                g_cost = 0.1  # bend cost
             if pos != self.end_pos and str(pos) in occupied_msg:
                 g_cost = occupied_msg[str(pos)]
             item = Item(pos, self.end_pos, self.g_score, g_cost + 1.414, self)
@@ -106,6 +123,8 @@ class Item:
         if y > 0:
             pos = [x, y - 1, z]
             g_cost = 0
+            if direct is not None and direct != [0, -1, 0]:
+                g_cost = 0.1  # bend cost
             if pos != self.end_pos and str(pos) in occupied_msg:
                 g_cost = occupied_msg[str(pos)]
             item = Item(pos, self.end_pos, self.g_score, g_cost + 1, self)
@@ -114,6 +133,8 @@ class Item:
         if x < grid_size[0] - 1 and y > 0:
             pos = [x + 1, y - 1, z]
             g_cost = 0
+            if direct is not None and direct != [1, -1, 0]:
+                g_cost = 0.1  # bend cost
             if pos != self.end_pos and str(pos) in occupied_msg:
                 g_cost = occupied_msg[str(pos)]
             item = Item(pos, self.end_pos, self.g_score, g_cost + 1.414, self)
@@ -158,8 +179,8 @@ def a_star_route(start, end, occupied_msg, grid_size):
 
     while open_set:
         cur_item = heapq.heappop(open_set)
-        if cur_item.cur_pos == [18, 12, 0]:
-            print('good\n')
+        # if cur_item.cur_pos == [18, 12, 0]:
+        #     print('good\n')
         if cur_item.cur_pos == end:
             return generate_path(cur_item)
         else:
@@ -188,13 +209,14 @@ if __name__ == '__main__':
         benchmark_info = read(benchmark_file)
         gridParameters = grid_parameters(benchmark_info)
         gridEnv = GridEnv(gridParameters)
-        while gridEnv.episode < 100:
+        start_time = time.time()  # Record starting time
+        while gridEnv.episode < 1:
             gridEnv.reset()
-            if gridEnv.episode == 100:
+            if gridEnv.episode == 1:
                 PlotDraw.draw_cost_plot(gridEnv.episode_cost, benchmark_i)
-                PlotDraw.draw_origin_grid_plot(gridEnv, benchmark_i)
+                PlotDraw.draw_origin_grid_plot(gridParameters, benchmark_i)
                 PlotDraw.draw_grid_plot(gridEnv, benchmark_i)
-            if gridEnv.episode == 100:
+            if gridEnv.episode == 1:
                 break
             gridEnv.breakup()
             route, cost = a_star_route(gridEnv.init_pos, gridEnv.goal_pos,
@@ -203,5 +225,6 @@ if __name__ == '__main__':
             gridEnv.cost = cost
             gridEnv.update()
         benchmark_i += 1
-        print(gridEnv)
+        end_time = time.time()  # Record ending time
         print(benchmark_file)
+        print("time{i} = {t} s".format(i=benchmark_i, t=end_time - start_time))
