@@ -162,14 +162,6 @@ class MainFrame(wx.Frame):
         self.button2 = wx.Button(self, -1, u'自定义生成布线问题', pos=(200, 140))
         self.button2.Bind(wx.EVT_BUTTON, self.OnButtonClick2)
 
-        # Button1显示组件
-        self.text1 = None
-        self.textc1 = None
-
-        # Button2显示组件
-        self.text2 = None
-        self.textc2 = None
-
     def OnButtonClick1(self, event):
         random_frame = RandomFrame()
         random_frame.Show()

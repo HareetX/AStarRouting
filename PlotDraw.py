@@ -1,5 +1,9 @@
 import numpy as np
+
 from matplotlib import pyplot as plt
+
+import matplotlib
+matplotlib.use('TkAgg')
 
 
 def draw_cost_plot(cost_list, benchmark_i):
@@ -22,8 +26,9 @@ def draw_origin_grid_plot(grid_parameter, benchmark_i=0):
         for j in range(net_info['numPins']):
             pins.append(net_info[str(j + 1)])
 
+    plt.figure(figsize=(13, 6))
     for layer in range(layer_num):
-        plt.figure()
+        plt.subplot(1, layer_num, layer + 1)
         o_i = 0
         # draw the start & end
         for i in range(len(pins)):
@@ -39,10 +44,9 @@ def draw_origin_grid_plot(grid_parameter, benchmark_i=0):
         plt.xlabel('X')
         plt.ylabel('Y')
         plt.legend()
-        # plt.show()
-        plt.savefig('OriginVisualize_benchmark2d_layer{layer}_{dumpBench}.png'
-                    .format(layer=layer, dumpBench=benchmark_i + 1))
-        plt.close()
+    plt.show()
+    # plt.savefig('OriginVisualize_benchmark2d_{dumpBench}.png'.format(dumpBench=benchmark_i + 1))
+    # plt.close()
 
 
 def draw_grid_plot(grid_env, benchmark_i=0):
@@ -53,8 +57,9 @@ def draw_grid_plot(grid_env, benchmark_i=0):
     start = []
     end = []
 
+    plt.figure(figsize=(13, 6))
     for layer in range(layer_num):
-        plt.figure()
+        plt.subplot(1, layer_num, layer + 1)
         o_i = 0
         v_i = 0
         for route in best_route:
@@ -96,7 +101,6 @@ def draw_grid_plot(grid_env, benchmark_i=0):
         # plt.scatter(marker="o", color='b', label="x**2")
         # plt.scatter(marker="v", color='r', label="2*x+1")
         plt.legend()
-        # plt.show()
-        plt.savefig('AStarRoutingVisualize_benchmark2d_layer{layer}_{dumpBench}.png'
-                    .format(layer=layer, dumpBench=benchmark_i + 1))
-        plt.close()
+    plt.show()
+    # plt.savefig('AStarRoutingVisualize_benchmark2d_{dumpBench}.png'.format(dumpBench=benchmark_i + 1))
+    # plt.close()
