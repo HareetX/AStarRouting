@@ -11,7 +11,7 @@ def generator(benchmark_name, grid_size, layer_num, net_num, max_pin_num):
     file = open('%s' % benchmark_name, 'w+')
 
     # Write general information
-    file.write('grid {gridSize} {gridSize} {layerNum}\n'.format(gridSize=grid_size, layerNum=layer_num))
+    file.write('grid {gridSizeX} {gridSizeY} {layerNum}\n'.format(gridSizeX=grid_size[0], gridSizeY=grid_size[1], layerNum=layer_num))
     file.write('net num {netNum}\n'.format(netNum=net_num))
 
     # Write nets information
@@ -19,8 +19,8 @@ def generator(benchmark_name, grid_size, layer_num, net_num, max_pin_num):
     for j in range(net_num):
         specific_pin_num = pin_num[j]
         file.write('A{netInd} {netInd} {pin}\n'.format(netInd=j + 1, pin=specific_pin_num))
-        x_array = np.random.randint(0, grid_size, specific_pin_num)
-        y_array = np.random.randint(0, grid_size, specific_pin_num)
+        x_array = np.random.randint(0, grid_size[0], specific_pin_num)
+        y_array = np.random.randint(0, grid_size[1], specific_pin_num)
         z_array = np.random.randint(0, layer_num, specific_pin_num)
         for k in range(specific_pin_num):
             file.write('{x}  {y}  {z}\n'.format(x=x_array[k], y=y_array[k], z=z_array[k]))
@@ -53,4 +53,4 @@ if __name__ == '__main__':
 
     for i in range(args.benchmarkNumber):
         filename = benchmark_dir + '/benchmark{}.gr'.format(i + 1)
-        generator(filename, args.gridSize, args.layerNum, args.netNum, args.maxPinNum)
+        generator(filename, [args.gridSize, args.gridSize], args.layerNum, args.netNum, args.maxPinNum)
