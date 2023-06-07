@@ -227,4 +227,4 @@ if __name__ == '__main__':
         benchmark_i += 1
         end_time = time.time()  # Record ending time
         print(benchmark_file)
-        print("time{i} = {t} s".format(i=benchmark_i, t=end_time - start_time))
+        print("benchmark{i} time = {t} s".format(i=benchmark_i, t=end_time - start_time))
