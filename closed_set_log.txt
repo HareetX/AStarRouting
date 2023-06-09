@@ -1,0 +1,35 @@
+benchmark/benchmark1.gr
+benchmark1 time = 6.484903335571289 s
+benchmark1 route time = 6.021291255950928 s
+	get neighbors time = 0.3144800662994385 s
+	add neighbors time = 5.670907497406006 s
+benchmark1 modify time = 0.015015363693237305 s
+
+benchmark/benchmark2.gr
+benchmark2 time = 4.328529596328735 s
+benchmark2 route time = 3.882957696914673 s
+	get neighbors time = 0.3465104103088379 s
+	add neighbors time = 3.4899017810821533 s
+benchmark2 modify time = 0.012069463729858398 s
+
+benchmark/benchmark3.gr
+benchmark3 time = 3.0736196041107178 s
+benchmark3 route time = 2.646397590637207 s
+	get neighbors time = 0.2273414134979248 s
+	add neighbors time = 2.3821802139282227 s
+benchmark3 modify time = 0.010960102081298828 s
+
+benchmark/benchmark4.gr
+benchmark4 time = 4.406246185302734 s
+benchmark4 route time = 3.965121269226074 s
+	get neighbors time = 0.29799818992614746 s
+	add neighbors time = 3.6262576580047607 s
+benchmark4 modify time = 0.015947341918945312 s
+
+benchmark/benchmark5.gr
+benchmark5 time = 2.3631296157836914 s
+benchmark5 route time = 2.0032520294189453 s
+	get neighbors time = 0.17588019371032715 s
+	add neighbors time = 1.8034281730651855 s
+benchmark5 modify time = 0.007999420166015625 s
+
