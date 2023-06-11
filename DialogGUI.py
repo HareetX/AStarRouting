@@ -6,7 +6,7 @@ import AStarSolver
 from BenchmarkGenerator import generator
 from GridEnvironment import GridEnv
 from PlotDraw import draw_origin_grid_plot, draw_grid_plot
-from ProblemParser import read, grid_parameters
+from ProblemParser import grid_parameters
 
 APP_ICON = 'icon/logo.ico'
 
@@ -34,8 +34,7 @@ class CustomizeFrame(wx.Frame):
     def OnButtonClick1(self, event):
         filename = self.tc1.GetValue()
         if os.path.isfile(filename):
-            benchmark_info = read(filename)
-            gp = grid_parameters(benchmark_info)
+            gp = grid_parameters(filename)
             draw_origin_grid_plot(gp)
         else:
             er_msg = wx.MessageDialog(None, "文件路径不存在", "错误信息提示", wx.YES_DEFAULT | wx.ICON_ERROR)
@@ -45,8 +44,7 @@ class CustomizeFrame(wx.Frame):
     def OnButtonClick2(self, event):
         filename = self.tc1.GetValue()
         if os.path.isfile(filename):
-            benchmark_info = read(filename)
-            gp = grid_parameters(benchmark_info)
+            gp = grid_parameters(filename)
             gridEnv = GridEnv(gp)
             while gridEnv.episode < 5:
                 gridEnv.reset()
@@ -112,15 +110,13 @@ class RandomFrame(wx.Frame):
         if self.tc5.GetValue().isdigit():
             max_pin_num = int(self.tc5.GetValue())
         generator(filename, [grid_x, grid_y], grid_z, net_num, max_pin_num)
-        benchmark_info = read(filename)
-        gp = grid_parameters(benchmark_info)
+        gp = grid_parameters(filename)
         draw_origin_grid_plot(gp)
 
     def OnButtonClick2(self, event):
         filename = 'random_benchmark.gr'
         if os.path.isfile(filename):
-            benchmark_info = read(filename)
-            gp = grid_parameters(benchmark_info)
+            gp = grid_parameters(filename)
             gridEnv = GridEnv(gp)
             while gridEnv.episode < 5:
                 gridEnv.reset()

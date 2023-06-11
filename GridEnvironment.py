@@ -4,12 +4,12 @@ import random
 
 import numpy as np
 
-from MathFunc import diagonal_distance
-from ProblemParser import read, grid_parameters
+from utils import diagonal_distance
+from ProblemParser import grid_parameters
 
 
 class GridEnv:
-    def __init__(self, grid_parameter):
+    def __init__(self, grid_parameter, type_=0):
         self.grid_parameter = grid_parameter
         self.grid_size = grid_parameter['gridSize']
         self.num_net = grid_parameter['numNet']
@@ -17,10 +17,12 @@ class GridEnv:
         self.d_line = 1
         self.d = 2 * self.d_line + 1
 
-        self.twoPinNetCombo, self.twoPinNetNums = self.generate_two_pin_net()
+        self.twoPinNetCombo, self.twoPinNetNums, self.netlist = self.generate_two_pin_net()
 
-        self.occupied_coord = self.generate_occupied_coord()
-        # #self.grid_graph = self.generate_grid_graph()
+        if type_ == 0:
+            self.occupied_coord = self.generate_occupied_coord()
+        else:
+            self.grid_graph = self.generate_grid_graph()
 
         self.route_combo = []
         self.route_cost = []
@@ -81,14 +83,39 @@ class GridEnv:
 
             two_pin_set = []
 
-        return two_pin_nets, two_pin_net_nums
+        return two_pin_nets, two_pin_net_nums, netlist
 
     def generate_occupied_coord(self):
         occupied_dict = {}
         for i in range(self.num_net):
             net_info = self.grid_parameter['netInfo'][i]
             for j in range(net_info['numPins']):
-                occupied_dict[str(net_info[str(j + 1)])] = 1000  # Large Enough
+                x_coord = net_info[str(j + 1)][0]
+                y_coord = net_info[str(j + 1)][1]
+                z_coord = net_info[str(j + 1)][2]
+
+                x_min = x_coord - self.d_line
+                x_max = x_coord + self.d_line + 1
+                y_min = y_coord - self.d_line
+                y_max = y_coord + self.d_line + 1
+                if x_min < 0:
+                    x_min = 0
+                if x_max > self.grid_size[0]:
+                    x_max = self.grid_size[0]
+                if y_min < 0:
+                    y_min = 0
+                if y_max > self.grid_size[1]:
+                    y_max = self.grid_size[1]
+                # Set the cost of the pin
+                for x_i in range(x_max - x_min):
+                    for y_i in range(y_max - y_min):
+                        hide_pos = [x_min + x_i, y_min + y_i, z_coord]
+                        if str(hide_pos) in occupied_dict:
+                            occupied_dict[str(hide_pos)] += 1000
+                        else:
+                            occupied_dict[str(hide_pos)] = 1000  # Large Enough
+
+                # occupied_dict[str(net_info[str(j + 1)])] = 1000  # Large Enough
         return occupied_dict
 
     def add_pin_effect(self, pin_x, pin_y, pin_z):
@@ -166,41 +193,247 @@ class GridEnv:
                     self.route.append(origin_route[i])
 
     def add_occupied_coord(self):
-        for i in range(len(self.route)):
-            if i > 0:
-                hide_pos_1 = None
-                hide_pos_2 = None
-                if self.route[i][0] - self.route[i-1][0] == -1 and self.route[i][1] - self.route[i-1][1] == 1:
-                    hide_pos_1 = [self.route[i][0] + 1, self.route[i][1], self.route[i][2]]
-                    hide_pos_2 = [self.route[i][0], self.route[i][1] - 1, self.route[i][2]]
-                elif self.route[i][0] - self.route[i-1][0] == -1 and self.route[i][1] - self.route[i-1][1] == -1:
-                    hide_pos_1 = [self.route[i][0] + 1, self.route[i][1], self.route[i][2]]
-                    hide_pos_2 = [self.route[i][0], self.route[i][1] + 1, self.route[i][2]]
-                elif self.route[i][0] - self.route[i-1][0] == 1 and self.route[i][1] - self.route[i-1][1] == 1:
-                    hide_pos_1 = [self.route[i][0] - 1, self.route[i][1], self.route[i][2]]
-                    hide_pos_2 = [self.route[i][0], self.route[i][1] - 1, self.route[i][2]]
-                elif self.route[i][0] - self.route[i-1][0] == 1 and self.route[i][1] - self.route[i-1][1] == -1:
-                    hide_pos_1 = [self.route[i][0] - 1, self.route[i][1], self.route[i][2]]
-                    hide_pos_2 = [self.route[i][0], self.route[i][1] + 1, self.route[i][2]]
-                elif abs(self.route[i][0] - self.route[i-1][0]) == 1 and self.route[i][1] - self.route[i-1][1] == 0:
-                    hide_pos_1 = [self.route[i][0], self.route[i][1] + 1, self.route[i][2]]
-                    hide_pos_2 = [self.route[i][0], self.route[i][1] + 1, self.route[i][2]]
-                elif self.route[i][0] - self.route[i-1][0] == 0 and abs(self.route[i][1] - self.route[i-1][1]) == 1:
-                    hide_pos_1 = [self.route[i][0] + 1, self.route[i][1], self.route[i][2]]
-                    hide_pos_2 = [self.route[i][0] + 1, self.route[i][1], self.route[i][2]]
-                if hide_pos_1 is not None and hide_pos_2 is not None:
-                    if str(hide_pos_1) in self.occupied_coord:
-                        self.occupied_coord[str(hide_pos_1)] += 1000
+        for i in range(len(self.route) - 1):
+            x_0, y_0, z_0 = self.route[i]
+            x_1, y_1, z_1 = self.route[i + 1]
+            direct = [x_1 - x_0, y_1 - y_0, z_1 - z_0]
+            if direct[0] == 0:
+                x_max = x_0 + self.d_line + 1
+                x_min = x_0 - self.d_line
+                if direct[1] == 0:  # go through a via
+                    y_max = y_0 + self.d_line + 1
+                    y_min = y_0 - self.d_line
+                    if z_0 < z_1:
+                        z_max = z_1 + 1
+                        z_min = z_0
                     else:
-                        self.occupied_coord[str(hide_pos_1)] = 1000  # Large Enough
-                    if str(hide_pos_2) in self.occupied_coord:
-                        self.occupied_coord[str(hide_pos_2)] += 1000
-                    else:
-                        self.occupied_coord[str(hide_pos_2)] = 1000  # Large Enough
-            if str(self.route[i]) in self.occupied_coord:
-                self.occupied_coord[str(self.route[i])] += 1000
-            else:
-                self.occupied_coord[str(self.route[i])] = 1000  # Large Enough0
+                        z_max = z_0 + 1
+                        z_min = z_1
+                else:  # go to the north or south
+                    if y_0 < y_1:  # go to the north
+                        y_max = y_1 + self.d_line + 1
+                        y_min = y_0 - self.d_line
+                    else:  # go to the south
+                        y_max = y_0 + self.d_line + 1
+                        y_min = y_1 - self.d_line
+                    z_max = z_0 + 1
+                    z_min = z_0
+
+                if x_min < 0:
+                    x_min = 0
+                if x_max > self.grid_size[0]:
+                    x_max = self.grid_size[0]
+                if y_min < 0:
+                    y_min = 0
+                if y_max > self.grid_size[1]:
+                    y_max = self.grid_size[1]
+                if z_min < 0:
+                    z_min = 0
+                if z_max > self.grid_size[2]:
+                    z_max = self.grid_size[2]
+
+                for x_i in range(x_max - x_min):
+                    for y_i in range(y_max - y_min):
+                        for z_i in range(z_max - z_min):
+                            hide_pos = [x_min + x_i, y_min + y_i, z_min + z_i]
+                            if str(hide_pos) in self.occupied_coord:
+                                self.occupied_coord[str(hide_pos)] += 1000
+                            else:
+                                self.occupied_coord[str(hide_pos)] = 1000  # Large Enough
+            elif direct[1] == 0:  # go to the east or west
+                if x_0 < x_1:  # go to the east
+                    x_max = x_1 + self.d_line + 1
+                    x_min = x_0 - self.d_line
+                else:  # go to the west
+                    x_max = x_0 + self.d_line + 1
+                    x_min = x_1 - self.d_line
+                y_max = y_0 + self.d_line + 1
+                y_min = y_0 - self.d_line
+                z_max = z_0 + 1
+                z_min = z_0
+
+                if x_min < 0:
+                    x_min = 0
+                if x_max > self.grid_size[0]:
+                    x_max = self.grid_size[0]
+                if y_min < 0:
+                    y_min = 0
+                if y_max > self.grid_size[1]:
+                    y_max = self.grid_size[1]
+                if z_min < 0:
+                    z_min = 0
+                if z_max > self.grid_size[2]:
+                    z_max = self.grid_size[2]
+
+                for x_i in range(x_max - x_min):
+                    for y_i in range(y_max - y_min):
+                        for z_i in range(z_max - z_min):
+                            hide_pos = [x_min + x_i, y_min + y_i, z_min + z_i]
+                            if str(hide_pos) in self.occupied_coord:
+                                self.occupied_coord[str(hide_pos)] += 1000
+                            else:
+                                self.occupied_coord[str(hide_pos)] = 1000  # Large Enough
+            else:  # go diagonally
+                if direct[0] > 0:
+                    delta_x = 1
+                    if direct[1] > 0:  # go to the north-east
+                        delta_y = 1
+                    else:  # go to the south-east
+                        delta_y = -1
+                else:
+                    delta_x = -1
+                    if direct[1] > 0:  # go to the north-west
+                        delta_y = 1
+                    else:  # go to the south-west
+                        delta_y = -1
+                while x_0 != x_1 + delta_x:
+                    x_max = x_0 + self.d_line + 1
+                    x_min = x_0 - self.d_line
+                    y_max = y_0 + self.d_line + 1
+                    y_min = y_0 - self.d_line
+
+                    if x_min < 0:
+                        x_min = 0
+                    if x_max > self.grid_size[0]:
+                        x_max = self.grid_size[0]
+                    if y_min < 0:
+                        y_min = 0
+                    if y_max > self.grid_size[1]:
+                        y_max = self.grid_size[1]
+                    # Set the cost of the routed path Large Enough
+                    for x_i in range(x_max - x_min):
+                        for y_i in range(y_max - y_min):
+                            hide_pos = [x_min + x_i, y_min + y_i, z_0]
+                            if str(hide_pos) in self.occupied_coord:
+                                self.occupied_coord[str(hide_pos)] += 1000
+                            else:
+                                self.occupied_coord[str(hide_pos)] = 1000  # Large Enough
+
+                    x_0 += delta_x
+                    y_0 += delta_y
+
+            # if i > 0:
+            #     hide_pos_1 = None
+            #     hide_pos_2 = None
+            #     hide_pos_3 = None
+            #     hide_pos_4 = None
+            #     hide_pos_5 = None
+            #     hide_pos_6 = None
+            #     hide_pos_7 = None
+            #     hide_pos_8 = None
+            #     hide_pos_1_ = None
+            #     hide_pos_2_ = None
+            #     hide_pos_3_ = None
+            #     hide_pos_4_ = None
+            #     hide_pos_5_ = None
+            #     hide_pos_6_ = None
+            #     hide_pos_7_ = None
+            #     hide_pos_8_ = None
+            #     if self.route[i][0] - self.route[i-1][0] == -1 and self.route[i][1] - self.route[i-1][1] == 1:
+            #         hide_pos_1 = [self.route[i][0] + 1, self.route[i][1], self.route[i][2]]
+            #         hide_pos_2 = [self.route[i][0], self.route[i][1] - 1, self.route[i][2]]
+            #     elif self.route[i][0] - self.route[i-1][0] == -1 and self.route[i][1] - self.route[i-1][1] == -1:
+            #         hide_pos_1 = [self.route[i][0] + 1, self.route[i][1], self.route[i][2]]
+            #         hide_pos_2 = [self.route[i][0], self.route[i][1] + 1, self.route[i][2]]
+            #     elif self.route[i][0] - self.route[i-1][0] == 1 and self.route[i][1] - self.route[i-1][1] == 1:
+            #         hide_pos_1 = [self.route[i][0] - 1, self.route[i][1], self.route[i][2]]
+            #         hide_pos_2 = [self.route[i][0], self.route[i][1] - 1, self.route[i][2]]
+            #     elif self.route[i][0] - self.route[i-1][0] == 1 and self.route[i][1] - self.route[i-1][1] == -1:
+            #         hide_pos_1 = [self.route[i][0] - 1, self.route[i][1], self.route[i][2]]
+            #         hide_pos_2 = [self.route[i][0], self.route[i][1] + 1, self.route[i][2]]
+            #     elif abs(self.route[i][0] - self.route[i-1][0]) == 1 and self.route[i][1] - self.route[i-1][1] == 0:
+            #         hide_pos_1 = [self.route[i][0], self.route[i][1] + 1, self.route[i][2]]
+            #         hide_pos_2 = [self.route[i][0], self.route[i][1] + 1, self.route[i][2]]
+            #     elif self.route[i][0] - self.route[i-1][0] == 0 and abs(self.route[i][1] - self.route[i-1][1]) == 1:
+            #         hide_pos_1 = [self.route[i][0] + 1, self.route[i][1], self.route[i][2]]
+            #         hide_pos_2 = [self.route[i][0] + 1, self.route[i][1], self.route[i][2]]
+            #     elif self.route[i][0] - self.route[i-1][0] == 0 and self.route[i][1] - self.route[i-1][1] == 0:
+            #         hide_pos_1 = [self.route[i][0] + 1, self.route[i][1], self.route[i][2]]
+            #         hide_pos_2 = [self.route[i][0] - 1, self.route[i][1], self.route[i][2]]
+            #         hide_pos_3 = [self.route[i][0], self.route[i][1] + 1, self.route[i][2]]
+            #         hide_pos_4 = [self.route[i][0], self.route[i][1] - 1, self.route[i][2]]
+            #         hide_pos_5 = [self.route[i][0] + 1, self.route[i][1] - 1, self.route[i][2]]
+            #         hide_pos_6 = [self.route[i][0] + 1, self.route[i][1] + 1, self.route[i][2]]
+            #         hide_pos_7 = [self.route[i][0] - 1, self.route[i][1] - 1, self.route[i][2]]
+            #         hide_pos_8 = [self.route[i][0] - 1, self.route[i][1] + 1, self.route[i][2]]
+            #         hide_pos_1_ = [self.route[i][0] + 1, self.route[i][1], self.route[i-1][2]]
+            #         hide_pos_2_ = [self.route[i][0] - 1, self.route[i][1], self.route[i-1][2]]
+            #         hide_pos_3_ = [self.route[i][0], self.route[i][1] + 1, self.route[i-1][2]]
+            #         hide_pos_4_ = [self.route[i][0], self.route[i][1] - 1, self.route[i-1][2]]
+            #         hide_pos_5_ = [self.route[i][0] + 1, self.route[i][1] - 1, self.route[i-1][2]]
+            #         hide_pos_6_ = [self.route[i][0] + 1, self.route[i][1] + 1, self.route[i-1][2]]
+            #         hide_pos_7_ = [self.route[i][0] - 1, self.route[i][1] - 1, self.route[i-1][2]]
+            #         hide_pos_8_ = [self.route[i][0] - 1, self.route[i][1] + 1, self.route[i-1][2]]
+            #     if hide_pos_1 is not None and hide_pos_2 is not None:
+            #         if str(hide_pos_1) in self.occupied_coord:
+            #             self.occupied_coord[str(hide_pos_1)] += 1000
+            #         else:
+            #             self.occupied_coord[str(hide_pos_1)] = 1000  # Large Enough
+            #         if str(hide_pos_2) in self.occupied_coord:
+            #             self.occupied_coord[str(hide_pos_2)] += 1000
+            #         else:
+            #             self.occupied_coord[str(hide_pos_2)] = 1000  # Large Enough
+            #         if hide_pos_3 is not None:
+            #             if str(hide_pos_3) in self.occupied_coord:
+            #                 self.occupied_coord[str(hide_pos_3)] += 1000
+            #             else:
+            #                 self.occupied_coord[str(hide_pos_3)] = 1000  # Large Enough
+            #             if str(hide_pos_4) in self.occupied_coord:
+            #                 self.occupied_coord[str(hide_pos_4)] += 1000
+            #             else:
+            #                 self.occupied_coord[str(hide_pos_4)] = 1000  # Large Enough
+            #             if str(hide_pos_5) in self.occupied_coord:
+            #                 self.occupied_coord[str(hide_pos_5)] += 1000
+            #             else:
+            #                 self.occupied_coord[str(hide_pos_5)] = 1000  # Large Enough
+            #             if str(hide_pos_6) in self.occupied_coord:
+            #                 self.occupied_coord[str(hide_pos_6)] += 1000
+            #             else:
+            #                 self.occupied_coord[str(hide_pos_6)] = 1000  # Large Enough
+            #             if str(hide_pos_7) in self.occupied_coord:
+            #                 self.occupied_coord[str(hide_pos_7)] += 1000
+            #             else:
+            #                 self.occupied_coord[str(hide_pos_7)] = 1000  # Large Enough
+            #             if str(hide_pos_8) in self.occupied_coord:
+            #                 self.occupied_coord[str(hide_pos_8)] += 1000
+            #             else:
+            #                 self.occupied_coord[str(hide_pos_8)] = 1000  # Large Enough
+            #             if str(hide_pos_1_) in self.occupied_coord:
+            #                 self.occupied_coord[str(hide_pos_1_)] += 1000
+            #             else:
+            #                 self.occupied_coord[str(hide_pos_1_)] = 1000  # Large Enough
+            #             if str(hide_pos_2_) in self.occupied_coord:
+            #                 self.occupied_coord[str(hide_pos_2_)] += 1000
+            #             else:
+            #                 self.occupied_coord[str(hide_pos_2_)] = 1000  # Large Enough
+            #             if str(hide_pos_3_) in self.occupied_coord:
+            #                 self.occupied_coord[str(hide_pos_3_)] += 1000
+            #             else:
+            #                 self.occupied_coord[str(hide_pos_3_)] = 1000  # Large Enough
+            #             if str(hide_pos_4_) in self.occupied_coord:
+            #                 self.occupied_coord[str(hide_pos_4_)] += 1000
+            #             else:
+            #                 self.occupied_coord[str(hide_pos_4_)] = 1000  # Large Enough
+            #             if str(hide_pos_5_) in self.occupied_coord:
+            #                 self.occupied_coord[str(hide_pos_5_)] += 1000
+            #             else:
+            #                 self.occupied_coord[str(hide_pos_5_)] = 1000  # Large Enough
+            #             if str(hide_pos_6_) in self.occupied_coord:
+            #                 self.occupied_coord[str(hide_pos_6_)] += 1000
+            #             else:
+            #                 self.occupied_coord[str(hide_pos_6_)] = 1000  # Large Enough
+            #             if str(hide_pos_7_) in self.occupied_coord:
+            #                 self.occupied_coord[str(hide_pos_7_)] += 1000
+            #             else:
+            #                 self.occupied_coord[str(hide_pos_7_)] = 1000  # Large Enough
+            #             if str(hide_pos_8_) in self.occupied_coord:
+            #                 self.occupied_coord[str(hide_pos_8_)] += 1000
+            #             else:
+            #                 self.occupied_coord[str(hide_pos_8_)] = 1000  # Large Enough
+            # if str(self.route[i]) in self.occupied_coord:
+            #     self.occupied_coord[str(self.route[i])] += 1000
+            # else:
+            #     self.occupied_coord[str(self.route[i])] = 1000  # Large Enough
 
     def add_route_occupied(self):
         for i in range(len(self.route) - 1):
@@ -303,38 +536,220 @@ class GridEnv:
                     y_0 += delta_y
 
     def del_occupied_coord(self):
-        for i in range(len(self.old_route)):
-            if i > 0:
-                hide_pos_1 = None
-                hide_pos_2 = None
-                if self.old_route[i][0] - self.old_route[i - 1][0] == -1 and self.old_route[i][1] - self.old_route[i - 1][1] == 1:
-                    hide_pos_1 = [self.old_route[i][0] + 1, self.old_route[i][1], self.old_route[i][2]]
-                    hide_pos_2 = [self.old_route[i][0], self.old_route[i][1] - 1, self.old_route[i][2]]
-                elif self.old_route[i][0] - self.old_route[i - 1][0] == -1 and self.old_route[i][1] - self.old_route[i - 1][1] == -1:
-                    hide_pos_1 = [self.old_route[i][0] + 1, self.old_route[i][1], self.old_route[i][2]]
-                    hide_pos_2 = [self.old_route[i][0], self.old_route[i][1] + 1, self.old_route[i][2]]
-                elif self.old_route[i][0] - self.old_route[i - 1][0] == 1 and self.old_route[i][1] - self.old_route[i - 1][1] == 1:
-                    hide_pos_1 = [self.old_route[i][0] - 1, self.old_route[i][1], self.old_route[i][2]]
-                    hide_pos_2 = [self.old_route[i][0], self.old_route[i][1] - 1, self.old_route[i][2]]
-                elif self.old_route[i][0] - self.old_route[i - 1][0] == 1 and self.old_route[i][1] - self.old_route[i - 1][1] == -1:
-                    hide_pos_1 = [self.old_route[i][0] - 1, self.old_route[i][1], self.old_route[i][2]]
-                    hide_pos_2 = [self.old_route[i][0], self.old_route[i][1] + 1, self.old_route[i][2]]
-                elif abs(self.old_route[i][0] - self.old_route[i - 1][0]) == 1 and self.old_route[i][1] - self.old_route[i - 1][1] == 0:
-                    hide_pos_1 = [self.old_route[i][0], self.old_route[i][1] + 1, self.old_route[i][2]]
-                    hide_pos_2 = [self.old_route[i][0], self.old_route[i][1] + 1, self.old_route[i][2]]
-                elif self.old_route[i][0] - self.old_route[i - 1][0] == 0 and abs(self.old_route[i][1] - self.old_route[i - 1][1]) == 1:
-                    hide_pos_1 = [self.old_route[i][0] + 1, self.old_route[i][1], self.old_route[i][2]]
-                    hide_pos_2 = [self.old_route[i][0] + 1, self.old_route[i][1], self.old_route[i][2]]
-                if hide_pos_1 is not None and hide_pos_2 is not None:
-                    self.occupied_coord[str(hide_pos_1)] -= 1000
-                    if self.occupied_coord[str(hide_pos_1)] == 0:
-                        del self.occupied_coord[str(hide_pos_1)]
-                    self.occupied_coord[str(hide_pos_2)] -= 1000
-                    if self.occupied_coord[str(hide_pos_2)] == 0:
-                        del self.occupied_coord[str(hide_pos_2)]
-            self.occupied_coord[str(self.old_route[i])] -= 1000
-            if self.occupied_coord[str(self.old_route[i])] == 0:
-                del self.occupied_coord[str(self.old_route[i])]
+        for i in range(len(self.old_route) - 1):
+            x_0, y_0, z_0 = self.old_route[i]
+            x_1, y_1, z_1 = self.old_route[i + 1]
+            direct = [x_1 - x_0, y_1 - y_0, z_1 - z_0]
+            if direct[0] == 0:
+                x_max = x_0 + self.d_line + 1
+                x_min = x_0 - self.d_line
+                if direct[1] == 0:  # go through a via
+                    y_max = y_0 + self.d_line + 1
+                    y_min = y_0 - self.d_line
+                    if z_0 < z_1:
+                        z_max = z_1 + 1
+                        z_min = z_0
+                    else:
+                        z_max = z_0 + 1
+                        z_min = z_1
+                else:  # go to the north or south
+                    if y_0 < y_1:  # go to the north
+                        y_max = y_1 + self.d_line + 1
+                        y_min = y_0 - self.d_line
+                    else:  # go to the south
+                        y_max = y_0 + self.d_line + 1
+                        y_min = y_1 - self.d_line
+                    z_max = z_0 + 1
+                    z_min = z_0
+
+                if x_min < 0:
+                    x_min = 0
+                if x_max > self.grid_size[0]:
+                    x_max = self.grid_size[0]
+                if y_min < 0:
+                    y_min = 0
+                if y_max > self.grid_size[1]:
+                    y_max = self.grid_size[1]
+                if z_min < 0:
+                    z_min = 0
+                if z_max > self.grid_size[2]:
+                    z_max = self.grid_size[2]
+
+                for x_i in range(x_max - x_min):
+                    for y_i in range(y_max - y_min):
+                        for z_i in range(z_max - z_min):
+                            hide_pos = [x_min + x_i, y_min + y_i, z_min + z_i]
+                            self.occupied_coord[str(hide_pos)] -= 1000
+                            if self.occupied_coord[str(hide_pos)] <= 0:
+                                del self.occupied_coord[str(hide_pos)]
+            elif direct[1] == 0:  # go to the east or west
+                if x_0 < x_1:  # go to the east
+                    x_max = x_1 + self.d_line + 1
+                    x_min = x_0 - self.d_line
+                else:  # go to the west
+                    x_max = x_0 + self.d_line + 1
+                    x_min = x_1 - self.d_line
+                y_max = y_0 + self.d_line + 1
+                y_min = y_0 - self.d_line
+
+                if x_min < 0:
+                    x_min = 0
+                if x_max > self.grid_size[0]:
+                    x_max = self.grid_size[0]
+                if y_min < 0:
+                    y_min = 0
+                if y_max > self.grid_size[1]:
+                    y_max = self.grid_size[1]
+
+                for x_i in range(x_max - x_min):
+                    for y_i in range(y_max - y_min):
+                        hide_pos = [x_min + x_i, y_min + y_i, z_0]
+                        self.occupied_coord[str(hide_pos)] -= 1000
+                        if self.occupied_coord[str(hide_pos)] <= 0:
+                            del self.occupied_coord[str(hide_pos)]
+            else:  # go diagonally
+                if direct[0] > 0:
+                    delta_x = 1
+                    if direct[1] > 0:  # go to the north-east
+                        delta_y = 1
+                    else:  # go to the south-east
+                        delta_y = -1
+                else:
+                    delta_x = -1
+                    if direct[1] > 0:  # go to the north-west
+                        delta_y = 1
+                    else:  # go to the south-west
+                        delta_y = -1
+                while x_0 != x_1 + delta_x:
+                    x_max = x_0 + self.d_line + 1
+                    x_min = x_0 - self.d_line
+                    y_max = y_0 + self.d_line + 1
+                    y_min = y_0 - self.d_line
+
+                    if x_min < 0:
+                        x_min = 0
+                    if x_max > self.grid_size[0]:
+                        x_max = self.grid_size[0]
+                    if y_min < 0:
+                        y_min = 0
+                    if y_max > self.grid_size[1]:
+                        y_max = self.grid_size[1]
+                    # Set the cost of the routed path Large Enough
+                    for x_i in range(x_max - x_min):
+                        for y_i in range(y_max - y_min):
+                            hide_pos = [x_min + x_i, y_min + y_i, z_0]
+                            self.occupied_coord[str(hide_pos)] -= 1000
+                            if self.occupied_coord[str(hide_pos)] <= 0:
+                                del self.occupied_coord[str(hide_pos)]
+
+                    x_0 += delta_x
+                    y_0 += delta_y
+
+            # if i > 0:
+            #     hide_pos_1 = None
+            #     hide_pos_2 = None
+            #     hide_pos_3 = None
+            #     hide_pos_4 = None
+            #     hide_pos_5 = None
+            #     hide_pos_6 = None
+            #     hide_pos_7 = None
+            #     hide_pos_8 = None
+            #     hide_pos_1_ = None
+            #     hide_pos_2_ = None
+            #     hide_pos_3_ = None
+            #     hide_pos_4_ = None
+            #     hide_pos_5_ = None
+            #     hide_pos_6_ = None
+            #     hide_pos_7_ = None
+            #     hide_pos_8_ = None
+            #     if self.old_route[i][0] - self.old_route[i - 1][0] == -1 and self.old_route[i][1] - self.old_route[i - 1][1] == 1:
+            #         hide_pos_1 = [self.old_route[i][0] + 1, self.old_route[i][1], self.old_route[i][2]]
+            #         hide_pos_2 = [self.old_route[i][0], self.old_route[i][1] - 1, self.old_route[i][2]]
+            #     elif self.old_route[i][0] - self.old_route[i - 1][0] == -1 and self.old_route[i][1] - self.old_route[i - 1][1] == -1:
+            #         hide_pos_1 = [self.old_route[i][0] + 1, self.old_route[i][1], self.old_route[i][2]]
+            #         hide_pos_2 = [self.old_route[i][0], self.old_route[i][1] + 1, self.old_route[i][2]]
+            #     elif self.old_route[i][0] - self.old_route[i - 1][0] == 1 and self.old_route[i][1] - self.old_route[i - 1][1] == 1:
+            #         hide_pos_1 = [self.old_route[i][0] - 1, self.old_route[i][1], self.old_route[i][2]]
+            #         hide_pos_2 = [self.old_route[i][0], self.old_route[i][1] - 1, self.old_route[i][2]]
+            #     elif self.old_route[i][0] - self.old_route[i - 1][0] == 1 and self.old_route[i][1] - self.old_route[i - 1][1] == -1:
+            #         hide_pos_1 = [self.old_route[i][0] - 1, self.old_route[i][1], self.old_route[i][2]]
+            #         hide_pos_2 = [self.old_route[i][0], self.old_route[i][1] + 1, self.old_route[i][2]]
+            #     elif abs(self.old_route[i][0] - self.old_route[i - 1][0]) == 1 and self.old_route[i][1] - self.old_route[i - 1][1] == 0:
+            #         hide_pos_1 = [self.old_route[i][0], self.old_route[i][1] + 1, self.old_route[i][2]]
+            #         hide_pos_2 = [self.old_route[i][0], self.old_route[i][1] + 1, self.old_route[i][2]]
+            #     elif self.old_route[i][0] - self.old_route[i - 1][0] == 0 and abs(self.old_route[i][1] - self.old_route[i - 1][1]) == 1:
+            #         hide_pos_1 = [self.old_route[i][0] + 1, self.old_route[i][1], self.old_route[i][2]]
+            #         hide_pos_2 = [self.old_route[i][0] + 1, self.old_route[i][1], self.old_route[i][2]]
+            #     elif self.old_route[i][0] - self.old_route[i-1][0] == 0 and self.old_route[i][1] - self.old_route[i-1][1] == 0:
+            #         hide_pos_1 = [self.old_route[i][0] + 1, self.old_route[i][1], self.old_route[i][2]]
+            #         hide_pos_2 = [self.old_route[i][0] - 1, self.old_route[i][1], self.old_route[i][2]]
+            #         hide_pos_3 = [self.old_route[i][0], self.old_route[i][1] + 1, self.old_route[i][2]]
+            #         hide_pos_4 = [self.old_route[i][0], self.old_route[i][1] - 1, self.old_route[i][2]]
+            #         hide_pos_5 = [self.old_route[i][0] + 1, self.old_route[i][1] - 1, self.old_route[i][2]]
+            #         hide_pos_6 = [self.old_route[i][0] + 1, self.old_route[i][1] + 1, self.old_route[i][2]]
+            #         hide_pos_7 = [self.old_route[i][0] - 1, self.old_route[i][1] - 1, self.old_route[i][2]]
+            #         hide_pos_8 = [self.old_route[i][0] - 1, self.old_route[i][1] + 1, self.old_route[i][2]]
+            #         hide_pos_1_ = [self.old_route[i][0] + 1, self.old_route[i][1], self.old_route[i-1][2]]
+            #         hide_pos_2_ = [self.old_route[i][0] - 1, self.old_route[i][1], self.old_route[i-1][2]]
+            #         hide_pos_3_ = [self.old_route[i][0], self.old_route[i][1] + 1, self.old_route[i-1][2]]
+            #         hide_pos_4_ = [self.old_route[i][0], self.old_route[i][1] - 1, self.old_route[i-1][2]]
+            #         hide_pos_5_ = [self.old_route[i][0] + 1, self.old_route[i][1] - 1, self.old_route[i-1][2]]
+            #         hide_pos_6_ = [self.old_route[i][0] + 1, self.old_route[i][1] + 1, self.old_route[i-1][2]]
+            #         hide_pos_7_ = [self.old_route[i][0] - 1, self.old_route[i][1] - 1, self.old_route[i-1][2]]
+            #         hide_pos_8_ = [self.old_route[i][0] - 1, self.old_route[i][1] + 1, self.old_route[i-1][2]]
+            #     if hide_pos_1 is not None and hide_pos_2 is not None:
+            #         self.occupied_coord[str(hide_pos_1)] -= 1000
+            #         if self.occupied_coord[str(hide_pos_1)] == 0:
+            #             del self.occupied_coord[str(hide_pos_1)]
+            #         self.occupied_coord[str(hide_pos_2)] -= 1000
+            #         if self.occupied_coord[str(hide_pos_2)] == 0:
+            #             del self.occupied_coord[str(hide_pos_2)]
+            #         if hide_pos_3 is not None:
+            #             self.occupied_coord[str(hide_pos_3)] -= 1000
+            #             if self.occupied_coord[str(hide_pos_3)] == 0:
+            #                 del self.occupied_coord[str(hide_pos_3)]
+            #             self.occupied_coord[str(hide_pos_4)] -= 1000
+            #             if self.occupied_coord[str(hide_pos_4)] == 0:
+            #                 del self.occupied_coord[str(hide_pos_4)]
+            #             self.occupied_coord[str(hide_pos_5)] -= 1000
+            #             if self.occupied_coord[str(hide_pos_5)] == 0:
+            #                 del self.occupied_coord[str(hide_pos_5)]
+            #             self.occupied_coord[str(hide_pos_6)] -= 1000
+            #             if self.occupied_coord[str(hide_pos_6)] == 0:
+            #                 del self.occupied_coord[str(hide_pos_6)]
+            #             self.occupied_coord[str(hide_pos_7)] -= 1000
+            #             if self.occupied_coord[str(hide_pos_7)] == 0:
+            #                 del self.occupied_coord[str(hide_pos_7)]
+            #             self.occupied_coord[str(hide_pos_8)] -= 1000
+            #             if self.occupied_coord[str(hide_pos_8)] == 0:
+            #                 del self.occupied_coord[str(hide_pos_8)]
+            #             self.occupied_coord[str(hide_pos_1_)] -= 1000
+            #             if self.occupied_coord[str(hide_pos_1_)] == 0:
+            #                 del self.occupied_coord[str(hide_pos_1_)]
+            #             self.occupied_coord[str(hide_pos_2_)] -= 1000
+            #             if self.occupied_coord[str(hide_pos_2_)] == 0:
+            #                 del self.occupied_coord[str(hide_pos_2_)]
+            #             self.occupied_coord[str(hide_pos_3_)] -= 1000
+            #             if self.occupied_coord[str(hide_pos_3_)] == 0:
+            #                 del self.occupied_coord[str(hide_pos_3_)]
+            #             self.occupied_coord[str(hide_pos_4_)] -= 1000
+            #             if self.occupied_coord[str(hide_pos_4_)] == 0:
+            #                 del self.occupied_coord[str(hide_pos_4_)]
+            #             self.occupied_coord[str(hide_pos_5_)] -= 1000
+            #             if self.occupied_coord[str(hide_pos_5_)] == 0:
+            #                 del self.occupied_coord[str(hide_pos_5_)]
+            #             self.occupied_coord[str(hide_pos_6_)] -= 1000
+            #             if self.occupied_coord[str(hide_pos_6_)] == 0:
+            #                 del self.occupied_coord[str(hide_pos_6_)]
+            #             self.occupied_coord[str(hide_pos_7_)] -= 1000
+            #             if self.occupied_coord[str(hide_pos_7_)] == 0:
+            #                 del self.occupied_coord[str(hide_pos_7_)]
+            #             self.occupied_coord[str(hide_pos_8_)] -= 1000
+            #             if self.occupied_coord[str(hide_pos_8_)] == 0:
+            #                 del self.occupied_coord[str(hide_pos_8_)]
+            # self.occupied_coord[str(self.old_route[i])] -= 1000
+            # if self.occupied_coord[str(self.old_route[i])] == 0:
+            #     del self.occupied_coord[str(self.old_route[i])]
 
     def del_route_occupied(self):
         for i in range(len(self.old_route) - 1):
@@ -386,8 +801,6 @@ class GridEnv:
                     x_min = x_1 - self.d_line
                 y_max = y_0 + self.d_line + 1
                 y_min = y_0 - self.d_line
-                z_max = z_0 + 1
-                z_min = z_0
 
                 if x_min < 0:
                     x_min = 0
@@ -397,12 +810,8 @@ class GridEnv:
                     y_min = 0
                 if y_max > self.grid_size[1]:
                     y_max = self.grid_size[1]
-                if z_min < 0:
-                    z_min = 0
-                if z_max > self.grid_size[2]:
-                    z_max = self.grid_size[2]
                 # Set the cost of the routed path Large Enough
-                self.grid_graph[x_min:x_max, y_min:y_max, z_min:z_max] -= 1000
+                self.grid_graph[x_min:x_max, y_min:y_max, z_0] -= 1000
             else:  # go diagonally
                 if direct[0] > 0:
                     delta_x = 1
@@ -500,6 +909,55 @@ class GridEnv:
         self.init_pos = self.twoPinNetCombo[self.twoPinNet_i][0]
         self.goal_pos = self.twoPinNetCombo[self.twoPinNet_i][1]
 
+        if self.episode == 0:
+            x_init = self.init_pos[0]
+            y_init = self.init_pos[1]
+            z_init = self.init_pos[2]
+
+            x_min = x_init - self.d_line
+            x_max = x_init + self.d_line + 1
+            y_min = y_init - self.d_line
+            y_max = y_init + self.d_line + 1
+            if x_min < 0:
+                x_min = 0
+            if x_max > self.grid_size[0]:
+                x_max = self.grid_size[0]
+            if y_min < 0:
+                y_min = 0
+            if y_max > self.grid_size[1]:
+                y_max = self.grid_size[1]
+            # Del the cost of the specified pin
+            for x_i in range(x_max - x_min):
+                for y_i in range(y_max - y_min):
+                    hide_pos = [x_min + x_i, y_min + y_i, z_init]
+                    self.occupied_coord[str(hide_pos)] -= 1000
+                    if self.occupied_coord[str(hide_pos)] <= 0:
+                        del self.occupied_coord[str(hide_pos)]
+
+            x_goal = self.goal_pos[0]
+            y_goal = self.goal_pos[1]
+            z_goal = self.goal_pos[2]
+
+            x_min = x_goal - self.d_line
+            x_max = x_goal + self.d_line + 1
+            y_min = y_goal - self.d_line
+            y_max = y_goal + self.d_line + 1
+            if x_min < 0:
+                x_min = 0
+            if x_max > self.grid_size[0]:
+                x_max = self.grid_size[0]
+            if y_min < 0:
+                y_min = 0
+            if y_max > self.grid_size[1]:
+                y_max = self.grid_size[1]
+            # Del the cost of the specified pin
+            for x_i in range(x_max - x_min):
+                for y_i in range(y_max - y_min):
+                    hide_pos = [x_min + x_i, y_min + y_i, z_goal]
+                    self.occupied_coord[str(hide_pos)] -= 1000
+                    if self.occupied_coord[str(hide_pos)] <= 0:
+                        del self.occupied_coord[str(hide_pos)]
+
         self.twoPinNet_i += 1
 
     def reset_v1(self):
@@ -552,8 +1010,7 @@ if __name__ == '__main__':
     benchmark_dir = 'benchmark'
     for benchmark_file in os.listdir(benchmark_dir):
         benchmark_file = benchmark_dir + '/' + benchmark_file
-        benchmark_info = read(benchmark_file)
-        gridParameters = grid_parameters(benchmark_info)
+        gridParameters = grid_parameters(benchmark_file)
         gridEnv = GridEnv(gridParameters)
         k = 0
         while gridEnv.episode < 10:
