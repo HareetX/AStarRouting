@@ -1,21 +1,10 @@
 import os
 
-
-def read(gr_file):
-    file = open(gr_file, 'r')
-    grid_info = {}
-    i = 0
-    for line in file:
-        if not line.strip():
-            continue
-        else:
-            grid_info[i] = line.split()
-        i += 1
-    file.close()
-    return grid_info
+from utils import read
 
 
-def grid_parameters(grid_info):
+def grid_parameters(grid_file):
+    grid_info = read(grid_file)
     grid_parameter = {}
     net_parameters_store = []
     for lineNum in range(len(grid_info)):
@@ -48,5 +37,4 @@ if __name__ == '__main__':
     benchmark_dir = 'benchmark'
     for benchmark_file in os.listdir(benchmark_dir):
         benchmark_file = benchmark_dir + '/' + benchmark_file
-        benchmark_info = read(benchmark_file)
-        gp = grid_parameters(benchmark_info)
+        gp = grid_parameters(benchmark_file)

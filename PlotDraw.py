@@ -121,3 +121,35 @@ def draw_grid_plot(grid_env, benchmark_i=0):
     plt.savefig('{result_dir}/AStarRoutingVisualize_benchmark2d_{dumpBench}.png'.format(result_dir=result_dir,
                                                                                         dumpBench=benchmark_i + 1))
     plt.close()
+
+
+def draw_line_chat_plot(data_combo, label_combo, num, y_label):
+    plt.figure()
+    for i in range(num):
+        n = np.linspace(1, len(data_combo[i]), len(data_combo[i]))
+        plt.plot(n, data_combo[i], label=label_combo[i])
+    plt.xlabel('episodes')
+    plt.ylabel(y_label)
+    plt.legend()
+
+    if not os.path.exists(result_dir):
+        os.mkdir(result_dir)
+
+    plt.savefig('{result_dir}/{label}Plot.jpg'.format(result_dir=result_dir, label=y_label))
+    plt.close()
+
+
+def draw_scatter_plot(data_combo, label_combo, num, y_label):
+    plt.figure()
+    for i in range(num):
+        n = np.linspace(1, len(data_combo[i]), len(data_combo[i]))
+        plt.scatter(n, data_combo[i], label=label_combo[i])
+    plt.xlabel('benchmark')
+    plt.ylabel(y_label)
+    plt.legend()
+
+    if not os.path.exists(result_dir):
+        os.mkdir(result_dir)
+
+    plt.savefig('{result_dir}/{label}Plot.jpg'.format(result_dir=result_dir, label=y_label))
+    plt.close()

@@ -1,0 +1,55 @@
+benchmark1
+benchmark1 time = 7.0801990032196045 s
+benchmark1 route time = 6.723269939422607 s
+	get neighbors time = 0.28041863441467285 s
+	get neighbors number = 27360
+	add neighbors time = 6.409961700439453 s
+benchmark1 modify time = 0.02192544937133789 s
+
+benchmark1 route length = 564.234
+benchmark1 via amount = 11
+
+benchmark2
+benchmark2 time = 4.465420246124268 s
+benchmark2 route time = 4.110997676849365 s
+	get neighbors time = 0.4024801254272461 s
+	get neighbors number = 35483
+	add neighbors time = 3.6636669635772705 s
+benchmark2 modify time = 0.03895401954650879 s
+
+benchmark2 route length = 682.564
+benchmark2 via amount = 23
+
+benchmark3
+benchmark3 time = 3.3382506370544434 s
+benchmark3 route time = 2.99979305267334 s
+	get neighbors time = 0.28686046600341797 s
+	get neighbors number = 22866
+	add neighbors time = 2.683032751083374 s
+benchmark3 modify time = 0.03388381004333496 s
+
+benchmark3 route length = 648.042
+benchmark3 via amount = 10
+
+benchmark4
+benchmark4 time = 4.532267808914185 s
+benchmark4 route time = 4.204297304153442 s
+	get neighbors time = 0.30988359451293945 s
+	get neighbors number = 27075
+	add neighbors time = 3.8595011234283447 s
+benchmark4 modify time = 0.024935007095336914 s
+
+benchmark4 route length = 588.2399999999998
+benchmark4 via amount = 14
+
+benchmark5
+benchmark5 time = 6.294321537017822 s
+benchmark5 route time = 5.9932897090911865 s
+	get neighbors time = 0.3560342788696289 s
+	get neighbors number = 31664
+	add neighbors time = 5.58941650390625 s
+benchmark5 modify time = 0.015935420989990234 s
+
+benchmark5 route length = 448.4179999999999
+benchmark5 via amount = 12
+

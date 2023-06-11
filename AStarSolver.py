@@ -1,3 +1,4 @@
+import argparse
 import copy
 import heapq
 import os
@@ -8,8 +9,9 @@ import numpy as np
 
 import PlotDraw
 from GridEnvironment import GridEnv
-from MathFunc import diagonal_distance
-from ProblemParser import read, grid_parameters
+from utils import diagonal_distance
+from ProblemParser import grid_parameters
+from RouteEvaluation import route_length, via_amount, min_via_amount
 
 
 class PriorityQueue:
@@ -66,7 +68,7 @@ class Item:
             if direct is not None and direct != [1, 0, 0]:
                 g_cost = 0.1  # bend cost
             if pos != self.end_pos and str(pos) in occupied_msg:
-                g_cost = occupied_msg[str(pos)]
+                g_cost += occupied_msg[str(pos)]
             item = Item(pos, self.end_pos, self.g_score, g_cost + 1, self)
             neighbors.append(item)
         # go to the east-north
@@ -76,7 +78,7 @@ class Item:
             if direct is not None and direct != [1, 1, 0]:
                 g_cost = 0.1  # bend cost
             if pos != self.end_pos and str(pos) in occupied_msg:
-                g_cost = occupied_msg[str(pos)]
+                g_cost += occupied_msg[str(pos)]
             item = Item(pos, self.end_pos, self.g_score, g_cost + 1.414, self)
             neighbors.append(item)
         # go to the north
@@ -86,7 +88,7 @@ class Item:
             if direct is not None and direct != [0, 1, 0]:
                 g_cost = 0.1  # bend cost
             if pos != self.end_pos and str(pos) in occupied_msg:
-                g_cost = occupied_msg[str(pos)]
+                g_cost += occupied_msg[str(pos)]
             item = Item(pos, self.end_pos, self.g_score, g_cost + 1, self)
             neighbors.append(item)
         # go to the west-north
@@ -96,7 +98,7 @@ class Item:
             if direct is not None and direct != [-1, 1, 0]:
                 g_cost = 0.1  # bend cost
             if pos != self.end_pos and str(pos) in occupied_msg:
-                g_cost = occupied_msg[str(pos)]
+                g_cost += occupied_msg[str(pos)]
             item = Item(pos, self.end_pos, self.g_score, g_cost + 1.414, self)
             neighbors.append(item)
         # go to the west
@@ -106,7 +108,7 @@ class Item:
             if direct is not None and direct != [-1, 0, 0]:
                 g_cost = 0.1  # bend cost
             if pos != self.end_pos and str(pos) in occupied_msg:
-                g_cost = occupied_msg[str(pos)]
+                g_cost += occupied_msg[str(pos)]
             item = Item(pos, self.end_pos, self.g_score, g_cost + 1, self)
             neighbors.append(item)
         # go to the west-south
@@ -116,7 +118,7 @@ class Item:
             if direct is not None and direct != [-1, -1, 0]:
                 g_cost = 0.1  # bend cost
             if pos != self.end_pos and str(pos) in occupied_msg:
-                g_cost = occupied_msg[str(pos)]
+                g_cost += occupied_msg[str(pos)]
             item = Item(pos, self.end_pos, self.g_score, g_cost + 1.414, self)
             neighbors.append(item)
         # go to the south
@@ -126,7 +128,7 @@ class Item:
             if direct is not None and direct != [0, -1, 0]:
                 g_cost = 0.1  # bend cost
             if pos != self.end_pos and str(pos) in occupied_msg:
-                g_cost = occupied_msg[str(pos)]
+                g_cost += occupied_msg[str(pos)]
             item = Item(pos, self.end_pos, self.g_score, g_cost + 1, self)
             neighbors.append(item)
         # go to the east-south
@@ -136,7 +138,7 @@ class Item:
             if direct is not None and direct != [1, -1, 0]:
                 g_cost = 0.1  # bend cost
             if pos != self.end_pos and str(pos) in occupied_msg:
-                g_cost = occupied_msg[str(pos)]
+                g_cost += occupied_msg[str(pos)]
             item = Item(pos, self.end_pos, self.g_score, g_cost + 1.414, self)
             neighbors.append(item)
 
@@ -171,9 +173,11 @@ class Item:
             next_x = x + 1
             next_y = y
             next_z = z
-            g_cost = grid_graph[next_x, next_y, next_z]
+            g_cost = 0
             if direct is not None and direct != [1, 0, 0]:
-                g_cost += 0.1  # bend cost
+                g_cost = 0.1  # bend cost
+            if [next_x, next_y, next_z] != self.end_pos:
+                g_cost += grid_graph[next_x, next_y, next_z]
             item = Item([next_x, next_y, next_z], self.end_pos, self.g_score, g_cost + 1, self)
             neighbors.append(item)
         # go to the east-north
@@ -181,9 +185,11 @@ class Item:
             next_x = x + 1
             next_y = y + 1
             next_z = z
-            g_cost = grid_graph[next_x, next_y, next_z]
+            g_cost = 0
             if direct is not None and direct != [1, 1, 0]:
-                g_cost += 0.1  # bend cost
+                g_cost = 0.1  # bend cost
+            if [next_x, next_y, next_z] != self.end_pos:
+                g_cost += grid_graph[next_x, next_y, next_z]
             item = Item([next_x, next_y, next_z], self.end_pos, self.g_score, g_cost + 1.414, self)
             neighbors.append(item)
         # go to the north
@@ -191,9 +197,11 @@ class Item:
             next_x = x
             next_y = y + 1
             next_z = z
-            g_cost = grid_graph[next_x, next_y, next_z]
+            g_cost = 0
             if direct is not None and direct != [0, 1, 0]:
-                g_cost += 0.1  # bend cost
+                g_cost = 0.1  # bend cost
+            if [next_x, next_y, next_z] != self.end_pos:
+                g_cost += grid_graph[next_x, next_y, next_z]
             item = Item([next_x, next_y, next_z], self.end_pos, self.g_score, g_cost + 1, self)
             neighbors.append(item)
         # go to the west-north
@@ -201,9 +209,11 @@ class Item:
             next_x = x - 1
             next_y = y + 1
             next_z = z
-            g_cost = grid_graph[next_x, next_y, next_z]
+            g_cost = 0
             if direct is not None and direct != [-1, 1, 0]:
-                g_cost += 0.1  # bend cost
+                g_cost = 0.1  # bend cost
+            if [next_x, next_y, next_z] != self.end_pos:
+                g_cost += grid_graph[next_x, next_y, next_z]
             item = Item([next_x, next_y, next_z], self.end_pos, self.g_score, g_cost + 1.414, self)
             neighbors.append(item)
         # go to the west
@@ -211,9 +221,11 @@ class Item:
             next_x = x - 1
             next_y = y
             next_z = z
-            g_cost = grid_graph[next_x, next_y, next_z]
+            g_cost = 0
             if direct is not None and direct != [-1, 0, 0]:
-                g_cost += 0.1  # bend cost
+                g_cost = 0.1  # bend cost
+            if [next_x, next_y, next_z] != self.end_pos:
+                g_cost += grid_graph[next_x, next_y, next_z]
             item = Item([next_x, next_y, next_z], self.end_pos, self.g_score, g_cost + 1, self)
             neighbors.append(item)
         # go to the west-south
@@ -221,9 +233,11 @@ class Item:
             next_x = x - 1
             next_y = y - 1
             next_z = z
-            g_cost = grid_graph[next_x, next_y, next_z]
+            g_cost = 0
             if direct is not None and direct != [-1, -1, 0]:
-                g_cost += 0.1  # bend cost
+                g_cost = 0.1  # bend cost
+            if [next_x, next_y, next_z] != self.end_pos:
+                g_cost += grid_graph[next_x, next_y, next_z]
             item = Item([next_x, next_y, next_z], self.end_pos, self.g_score, g_cost + 1.414, self)
             neighbors.append(item)
         # go to the south
@@ -231,9 +245,11 @@ class Item:
             next_x = x
             next_y = y - 1
             next_z = z
-            g_cost = grid_graph[next_x, next_y, next_z]
+            g_cost = 0
             if direct is not None and direct != [0, -1, 0]:
-                g_cost += 0.1  # bend cost
+                g_cost = 0.1  # bend cost
+            if [next_x, next_y, next_z] != self.end_pos:
+                g_cost += grid_graph[next_x, next_y, next_z]
             item = Item([next_x, next_y, next_z], self.end_pos, self.g_score, g_cost + 1, self)
             neighbors.append(item)
         # go to the east-south
@@ -241,9 +257,11 @@ class Item:
             next_x = x + 1
             next_y = y - 1
             next_z = z
-            g_cost = grid_graph[next_x, next_y, next_z]
+            g_cost = 0
             if direct is not None and direct != [1, -1, 0]:
-                g_cost += 0.1  # bend cost
+                g_cost = 0.1  # bend cost
+            if [next_x, next_y, next_z] != self.end_pos:
+                g_cost += grid_graph[next_x, next_y, next_z]
             item = Item([next_x, next_y, next_z], self.end_pos, self.g_score, g_cost + 1.414, self)
             neighbors.append(item)
 
@@ -252,7 +270,9 @@ class Item:
             next_x = x
             next_y = y
             next_z = z + 1
-            g_cost = grid_graph[next_x, next_y, next_z]
+            g_cost = 0
+            if [next_x, next_y, next_z] != self.end_pos:
+                g_cost += grid_graph[next_x, next_y, next_z]
             item = Item([next_x, next_y, next_z], self.end_pos, self.g_score,
                         g_cost + 10, self)  # go through a via need a high cost
             neighbors.append(item)
@@ -261,7 +281,9 @@ class Item:
             next_x = x
             next_y = y
             next_z = z - 1
-            g_cost = grid_graph[next_x, next_y, next_z]
+            g_cost = 0
+            if [next_x, next_y, next_z] != self.end_pos:
+                g_cost += grid_graph[next_x, next_y, next_z]
             item = Item([next_x, next_y, next_z], self.end_pos, self.g_score,
                         g_cost + 10, self)  # go through a via need a high cost
             neighbors.append(item)
@@ -282,9 +304,11 @@ def generate_path(end_item):
 global get_neighbors_time
 global add_neighbors_time
 
+global get_neighbors_num
+
 
 def a_star_route(start, end, occupied_msg, grid_size):
-    global get_neighbors_time, add_neighbors_time
+    global get_neighbors_time, add_neighbors_time, get_neighbors_num
     open_set = []
     # closed_set = []
     closed_set = set([])
@@ -306,6 +330,7 @@ def a_star_route(start, end, occupied_msg, grid_size):
             neighbor_list = cur_item.get_neighbors(occupied_msg, grid_size)
             get_neighbors_time_end = time.time()
             get_neighbors_time += get_neighbors_time_end - get_neighbors_time_start
+            get_neighbors_num += 1
 
             add_neighbors_time_start = time.time()
             for neighbor in neighbor_list:
@@ -338,7 +363,7 @@ def a_star_route(start, end, occupied_msg, grid_size):
 
 
 def a_star_route_v1(start, end, grid_graph, grid_size):
-    global get_neighbors_time, add_neighbors_time
+    global get_neighbors_time, add_neighbors_time, get_neighbors_num
     open_set = []
     # closed_set = []
     closed_set = set([])
@@ -360,6 +385,7 @@ def a_star_route_v1(start, end, grid_graph, grid_size):
             neighbor_list = cur_item.get_neighbors_v1(grid_graph, grid_size)
             get_neighbors_time_end = time.time()
             get_neighbors_time += get_neighbors_time_end - get_neighbors_time_start
+            get_neighbors_num += 1
 
             add_neighbors_time_start = time.time()
             for neighbor in neighbor_list:
@@ -391,17 +417,26 @@ def a_star_route_v1(start, end, grid_graph, grid_size):
             add_neighbors_time += add_neighbors_time_end - add_neighbors_time_start
 
 
+def solver_arguments():
+    parser = argparse.ArgumentParser('AStarSolver')
+    parser.add_argument('--type', type=int, dest='type', default=0)
+    parser.add_argument('--episode', type=int, dest='episode', default=5)
+    parser.add_argument('--log', type=str, dest='log', default="log_dict.txt")
+
+    return parser.parse_args()
+
+
 if __name__ == '__main__':
-    log = open("log.txt", 'w', encoding="utf-8")
+    arg = solver_arguments()
+    log = open(arg.log, 'w', encoding="utf-8")
 
     benchmark_dir = 'benchmark'
     benchmark_i = 0
 
     for benchmark_file in os.listdir(benchmark_dir):
         benchmark_file = benchmark_dir + '/' + benchmark_file
-        benchmark_info = read(benchmark_file)
-        gridParameters = grid_parameters(benchmark_info)
-        gridEnv = GridEnv(gridParameters)
+        gridParameters = grid_parameters(benchmark_file)
+        gridEnv = GridEnv(gridParameters, arg.type)
 
         start_time = time.time()  # Record starting time
         route_time = 0
@@ -409,55 +444,78 @@ if __name__ == '__main__':
         add_neighbors_time = 0
         modify_time = 0
 
-        while gridEnv.episode < 5:
-            gridEnv.reset()
-            # #gridEnv.reset_v1()
-            if gridEnv.episode == 5:
+        get_neighbors_num = 0
+
+        while gridEnv.episode < arg.episode:
+            if arg.type == 0:
+                # print(0)
+                gridEnv.reset()
+            else:
+                # print(1)
+                gridEnv.reset_v1()
+            if gridEnv.episode == arg.episode:
                 PlotDraw.draw_cost_plot(gridEnv.episode_cost, benchmark_i)
                 PlotDraw.draw_origin_grid_plot(gridParameters, benchmark_i)
                 PlotDraw.draw_grid_plot(gridEnv, benchmark_i)
-            if gridEnv.episode == 5:
+            if gridEnv.episode == arg.episode:
                 break
 
             modify_time_start = time.time()  # Record modify starting time
-            gridEnv.breakup()
-            # #gridEnv.breakup_v1()
+            if arg.type == 0:
+                gridEnv.breakup()
+            else:
+                gridEnv.breakup_v1()
             modify_time_end = time.time()  # Record modify ending time
             modify_time += modify_time_end - modify_time_start
 
             route_time_start = time.time()  # Record route starting time
-            route, cost = a_star_route(gridEnv.init_pos, gridEnv.goal_pos,
-                                       gridEnv.occupied_coord, gridParameters['gridSize'])
-            # #route, cost = a_star_route_v1(gridEnv.init_pos, gridEnv.goal_pos,
-            # #                              gridEnv.grid_graph, gridParameters['gridSize'])
+            if arg.type == 0:
+                route, cost = a_star_route(gridEnv.init_pos, gridEnv.goal_pos,
+                                           gridEnv.occupied_coord, gridParameters['gridSize'])
+            else:
+                route, cost = a_star_route_v1(gridEnv.init_pos, gridEnv.goal_pos,
+                                              gridEnv.grid_graph, gridParameters['gridSize'])
             route_time_end = time.time()  # Record route ending time
             route_time += route_time_end - route_time_start
 
-            gridEnv.route = route
-            # #gridEnv.set_route(route)
+            # gridEnv.route = route
+            gridEnv.set_route(route)
             gridEnv.cost = cost
 
             modify_time_start = time.time()  # Record modify starting time
-            gridEnv.update()
-            # #gridEnv.update_v1()
+            if arg.type == 0:
+                gridEnv.update()
+            else:
+                gridEnv.update_v1()
             modify_time_end = time.time()  # Record modify ending time
             modify_time += modify_time_end - modify_time_start
 
         benchmark_i += 1
         end_time = time.time()  # Record ending time
 
-        print(benchmark_file)
+        print("benchmark{i}".format(i=benchmark_i))
         print("benchmark{i} time = {t} s".format(i=benchmark_i, t=end_time - start_time))
         print("benchmark{i} route time = {t} s".format(i=benchmark_i, t=route_time))
         print("\tget neighbors time = {t} s".format(t=get_neighbors_time))
+        print("\tget neighbors number = {num}".format(num=get_neighbors_num))
         print("\tadd neighbors time = {t} s".format(t=add_neighbors_time))
-        print("benchmark{i} modify time = {t} s\n".format(i=benchmark_i, t=modify_time))
+        print("benchmark{i} modify time = {t} s".format(i=benchmark_i, t=modify_time))
+        print("benchmark{i} route length = {len}".format(i=benchmark_i, len=route_length(gridEnv.route_combo)))
+        print("benchmark{i} via amount = {num}\n".format(i=benchmark_i, num=via_amount(gridEnv.route_combo)))
+        # print("benchmark{i} via amount = {num} / {min}\n".format(i=benchmark_i, num=via_amount(gridEnv.route_combo),
+        #                                                          min=min_via_amount(gridEnv.netlist)))
 
-        print(benchmark_file, file=log)
+        print("benchmark{i}".format(i=benchmark_i), file=log)
         print("benchmark{i} time = {t} s".format(i=benchmark_i, t=end_time - start_time), file=log)
         print("benchmark{i} route time = {t} s".format(i=benchmark_i, t=route_time), file=log)
         print("\tget neighbors time = {t} s".format(t=get_neighbors_time), file=log)
+        print("\tget neighbors number = {num}".format(num=get_neighbors_num), file=log)
         print("\tadd neighbors time = {t} s".format(t=add_neighbors_time), file=log)
         print("benchmark{i} modify time = {t} s\n".format(i=benchmark_i, t=modify_time), file=log)
+        print("benchmark{i} route length = {len}".format(i=benchmark_i, len=route_length(gridEnv.route_combo)),
+              file=log)
+        print("benchmark{i} via amount = {num}\n".format(i=benchmark_i, num=via_amount(gridEnv.route_combo)), file=log)
+        # print("benchmark{i} via amount = {num} / {min}\n".format(i=benchmark_i, num=via_amount(gridEnv.route_combo),
+        #                                                          min=min_via_amount(gridEnv.netlist)), file=log)
 
     log.close()
