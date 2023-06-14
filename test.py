@@ -38,9 +38,11 @@ if __name__ == '__main__':
     log_parameters_ndarray = {}
 
     for i in range(10):
-        os.system("python AStarSolver.py --type={t} --episode={e} --log={l}".format(t=0, e=5, l='log_dict.txt'))
+        os.system("python AStarSolver.py --type={t} --episode={e} --log={l} --trace={tr}"
+                  .format(t=0, e=5, l='log_dict.txt', tr=True))
         get_log_parameters(log_file_dict, log_parameters_dict)
-        os.system("python AStarSolver.py --type={t} --episode={e} --log={l}".format(t=1, e=5, l='log_ndarray.txt'))
+        os.system("python AStarSolver.py --type={t} --episode={e} --log={l} --trace={tr}"
+                  .format(t=1, e=5, l='log_ndarray.txt', tr=True))
         get_log_parameters(log_file_ndarray, log_parameters_ndarray)
 
     dict_time_list = None

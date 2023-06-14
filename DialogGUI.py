@@ -55,7 +55,8 @@ class CustomizeFrame(wx.Frame):
                 gridEnv.breakup()
                 route, cost = AStarSolver.a_star_route(gridEnv.init_pos, gridEnv.goal_pos,
                                                        gridEnv.occupied_coord, gp['gridSize'])
-                gridEnv.route = route
+                # gridEnv.route = route
+                gridEnv.set_route(route)
                 gridEnv.cost = cost
                 gridEnv.update()
         else:
@@ -127,7 +128,8 @@ class RandomFrame(wx.Frame):
                 gridEnv.breakup()
                 route, cost = AStarSolver.a_star_route(gridEnv.init_pos, gridEnv.goal_pos,
                                                        gridEnv.occupied_coord, gp['gridSize'])
-                gridEnv.route = route
+                # gridEnv.route = route
+                gridEnv.set_route(route)
                 gridEnv.cost = cost
                 gridEnv.update()
         else:

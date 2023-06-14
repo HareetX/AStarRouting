@@ -308,6 +308,8 @@ global get_neighbors_num
 
 
 def a_star_route(start, end, occupied_msg, grid_size):
+    # arg = solver_arguments()
+    # if arg.trace:
     global get_neighbors_time, add_neighbors_time, get_neighbors_num
     open_set = []
     # closed_set = []
@@ -318,51 +320,81 @@ def a_star_route(start, end, occupied_msg, grid_size):
 
     while open_set:
         cur_item = heapq.heappop(open_set)
-        # if cur_item.cur_pos == [18, 12, 0]:
-        #     print('good\n')
         if cur_item.cur_pos == end:
             return generate_path(cur_item)
         else:
             # closed_set.append(cur_item)
             closed_set.add(str(cur_item.cur_pos))
 
-            get_neighbors_time_start = time.time()
-            neighbor_list = cur_item.get_neighbors(occupied_msg, grid_size)
-            get_neighbors_time_end = time.time()
-            get_neighbors_time += get_neighbors_time_end - get_neighbors_time_start
-            get_neighbors_num += 1
+            if arg.trace:
+                get_neighbors_time_start = time.time()
+                neighbor_list = cur_item.get_neighbors(occupied_msg, grid_size)
+                get_neighbors_time_end = time.time()
+                get_neighbors_time += get_neighbors_time_end - get_neighbors_time_start
+                get_neighbors_num += 1
+            else:
+                neighbor_list = cur_item.get_neighbors(occupied_msg, grid_size)
 
-            add_neighbors_time_start = time.time()
-            for neighbor in neighbor_list:
-                # if neighbor in closed_set:
-                if str(neighbor.cur_pos) in closed_set:
-                    continue
-                else:
-                    flag = True
-                    for item in open_set:
-                        if neighbor == item:
-                            flag = False
-                            if neighbor.g_score < item.g_score:
-                                item.set_g_score(neighbor.g_score)
-                                item.parent = neighbor.parent
-                                heapq.heapify(open_set)
-                            break
-                    if flag:
-                        heapq.heappush(open_set, neighbor)
-                # elif neighbor in open_set:
-                #     for item in open_set:
-                #         if neighbor == item:
-                #             if neighbor.g_score < item.g_score:
-                #                 item.set_g_score(neighbor.g_score)
-                #                 item.parent = neighbor.parent
-                #                 heapq.heapify(open_set)
-                # else:
-                #     heapq.heappush(open_set, neighbor)
-            add_neighbors_time_end = time.time()
-            add_neighbors_time += add_neighbors_time_end - add_neighbors_time_start
+            if arg.trace:
+                add_neighbors_time_start = time.time()
+                for neighbor in neighbor_list:
+                    # if neighbor in closed_set:
+                    if str(neighbor.cur_pos) in closed_set:
+                        continue
+                    else:
+                        flag = True
+                        for item in open_set:
+                            if neighbor == item:
+                                flag = False
+                                if neighbor.g_score < item.g_score:
+                                    item.set_g_score(neighbor.g_score)
+                                    item.parent = neighbor.parent
+                                    heapq.heapify(open_set)
+                                break
+                        if flag:
+                            heapq.heappush(open_set, neighbor)
+                    # elif neighbor in open_set:
+                    #     for item in open_set:
+                    #         if neighbor == item:
+                    #             if neighbor.g_score < item.g_score:
+                    #                 item.set_g_score(neighbor.g_score)
+                    #                 item.parent = neighbor.parent
+                    #                 heapq.heapify(open_set)
+                    # else:
+                    #     heapq.heappush(open_set, neighbor)
+                add_neighbors_time_end = time.time()
+                add_neighbors_time += add_neighbors_time_end - add_neighbors_time_start
+            else:
+                for neighbor in neighbor_list:
+                    # if neighbor in closed_set:
+                    if str(neighbor.cur_pos) in closed_set:
+                        continue
+                    else:
+                        flag = True
+                        for item in open_set:
+                            if neighbor == item:
+                                flag = False
+                                if neighbor.g_score < item.g_score:
+                                    item.set_g_score(neighbor.g_score)
+                                    item.parent = neighbor.parent
+                                    heapq.heapify(open_set)
+                                break
+                        if flag:
+                            heapq.heappush(open_set, neighbor)
+                    # elif neighbor in open_set:
+                    #     for item in open_set:
+                    #         if neighbor == item:
+                    #             if neighbor.g_score < item.g_score:
+                    #                 item.set_g_score(neighbor.g_score)
+                    #                 item.parent = neighbor.parent
+                    #                 heapq.heapify(open_set)
+                    # else:
+                    #     heapq.heappush(open_set, neighbor)
 
 
 def a_star_route_v1(start, end, grid_graph, grid_size):
+    # arg = solver_arguments()
+    # if arg.trace:
     global get_neighbors_time, add_neighbors_time, get_neighbors_num
     open_set = []
     # closed_set = []
@@ -373,61 +405,91 @@ def a_star_route_v1(start, end, grid_graph, grid_size):
 
     while open_set:
         cur_item = heapq.heappop(open_set)
-        # if cur_item.cur_pos == [18, 12, 0]:
-        #     print('good\n')
         if cur_item.cur_pos == end:
             return generate_path(cur_item)
         else:
             # closed_set.append(cur_item)
             closed_set.add(str(cur_item.cur_pos))
 
-            get_neighbors_time_start = time.time()
-            neighbor_list = cur_item.get_neighbors_v1(grid_graph, grid_size)
-            get_neighbors_time_end = time.time()
-            get_neighbors_time += get_neighbors_time_end - get_neighbors_time_start
-            get_neighbors_num += 1
+            if arg.trace:
+                get_neighbors_time_start = time.time()
+                neighbor_list = cur_item.get_neighbors_v1(grid_graph, grid_size)
+                get_neighbors_time_end = time.time()
+                get_neighbors_time += get_neighbors_time_end - get_neighbors_time_start
+                get_neighbors_num += 1
+            else:
+                neighbor_list = cur_item.get_neighbors_v1(grid_graph, grid_size)
 
-            add_neighbors_time_start = time.time()
-            for neighbor in neighbor_list:
-                # if neighbor in closed_set:
-                if str(neighbor.cur_pos) in closed_set:
-                    continue
-                else:
-                    flag = True
-                    for item in open_set:
-                        if neighbor == item:
-                            flag = False
-                            if neighbor.g_score < item.g_score:
-                                item.set_g_score(neighbor.g_score)
-                                item.parent = neighbor.parent
-                                heapq.heapify(open_set)
-                            break
-                    if flag:
-                        heapq.heappush(open_set, neighbor)
-                # elif neighbor in open_set:
-                #     for item in open_set:
-                #         if neighbor == item:
-                #             if neighbor.g_score < item.g_score:
-                #                 item.set_g_score(neighbor.g_score)
-                #                 item.parent = neighbor.parent
-                #                 heapq.heapify(open_set)
-                # else:
-                #     heapq.heappush(open_set, neighbor)
-            add_neighbors_time_end = time.time()
-            add_neighbors_time += add_neighbors_time_end - add_neighbors_time_start
+            if arg.trace:
+                add_neighbors_time_start = time.time()
+                for neighbor in neighbor_list:
+                    # if neighbor in closed_set:
+                    if str(neighbor.cur_pos) in closed_set:
+                        continue
+                    else:
+                        flag = True
+                        for item in open_set:
+                            if neighbor == item:
+                                flag = False
+                                if neighbor.g_score < item.g_score:
+                                    item.set_g_score(neighbor.g_score)
+                                    item.parent = neighbor.parent
+                                    heapq.heapify(open_set)
+                                break
+                        if flag:
+                            heapq.heappush(open_set, neighbor)
+                    # elif neighbor in open_set:
+                    #     for item in open_set:
+                    #         if neighbor == item:
+                    #             if neighbor.g_score < item.g_score:
+                    #                 item.set_g_score(neighbor.g_score)
+                    #                 item.parent = neighbor.parent
+                    #                 heapq.heapify(open_set)
+                    # else:
+                    #     heapq.heappush(open_set, neighbor)
+                add_neighbors_time_end = time.time()
+                add_neighbors_time += add_neighbors_time_end - add_neighbors_time_start
+            else:
+                for neighbor in neighbor_list:
+                    # if neighbor in closed_set:
+                    if str(neighbor.cur_pos) in closed_set:
+                        continue
+                    else:
+                        flag = True
+                        for item in open_set:
+                            if neighbor == item:
+                                flag = False
+                                if neighbor.g_score < item.g_score:
+                                    item.set_g_score(neighbor.g_score)
+                                    item.parent = neighbor.parent
+                                    heapq.heapify(open_set)
+                                break
+                        if flag:
+                            heapq.heappush(open_set, neighbor)
+                    # elif neighbor in open_set:
+                    #     for item in open_set:
+                    #         if neighbor == item:
+                    #             if neighbor.g_score < item.g_score:
+                    #                 item.set_g_score(neighbor.g_score)
+                    #                 item.parent = neighbor.parent
+                    #                 heapq.heapify(open_set)
+                    # else:
+                    #     heapq.heappush(open_set, neighbor)
 
 
 def solver_arguments():
     parser = argparse.ArgumentParser('AStarSolver')
-    parser.add_argument('--type', type=int, dest='type', default=0)
+    parser.add_argument('--type', type=int, dest='type', default=1)
     parser.add_argument('--episode', type=int, dest='episode', default=5)
-    parser.add_argument('--log', type=str, dest='log', default="log_dict.txt")
+    parser.add_argument('--log', type=str, dest='log', default="log.txt")
+    parser.add_argument('--trace', type=bool, dest='trace', default=False)
 
     return parser.parse_args()
 
 
 if __name__ == '__main__':
     arg = solver_arguments()
+
     log = open(arg.log, 'w', encoding="utf-8")
 
     benchmark_dir = 'benchmark'
@@ -438,6 +500,7 @@ if __name__ == '__main__':
         gridParameters = grid_parameters(benchmark_file)
         gridEnv = GridEnv(gridParameters, arg.type)
 
+        # if arg.trace:
         start_time = time.time()  # Record starting time
         route_time = 0
         get_neighbors_time = 0
@@ -448,10 +511,8 @@ if __name__ == '__main__':
 
         while gridEnv.episode < arg.episode:
             if arg.type == 0:
-                # print(0)
                 gridEnv.reset()
             else:
-                # print(1)
                 gridEnv.reset_v1()
             if gridEnv.episode == arg.episode:
                 PlotDraw.draw_cost_plot(gridEnv.episode_cost, benchmark_i)
@@ -460,62 +521,87 @@ if __name__ == '__main__':
             if gridEnv.episode == arg.episode:
                 break
 
-            modify_time_start = time.time()  # Record modify starting time
-            if arg.type == 0:
-                gridEnv.breakup()
+            if arg.trace:
+                modify_time_start = time.time()  # Record modify starting time
+                if arg.type == 0:
+                    gridEnv.breakup()
+                else:
+                    gridEnv.breakup_v1()
+                modify_time_end = time.time()  # Record modify ending time
+                modify_time += modify_time_end - modify_time_start
             else:
-                gridEnv.breakup_v1()
-            modify_time_end = time.time()  # Record modify ending time
-            modify_time += modify_time_end - modify_time_start
+                if arg.type == 0:
+                    gridEnv.breakup()
+                else:
+                    gridEnv.breakup_v1()
 
-            route_time_start = time.time()  # Record route starting time
-            if arg.type == 0:
-                route, cost = a_star_route(gridEnv.init_pos, gridEnv.goal_pos,
-                                           gridEnv.occupied_coord, gridParameters['gridSize'])
+            if arg.trace:
+                route_time_start = time.time()  # Record route starting time
+                if arg.type == 0:
+                    route, cost = a_star_route(gridEnv.init_pos, gridEnv.goal_pos,
+                                               gridEnv.occupied_coord, gridParameters['gridSize'])
+                else:
+                    route, cost = a_star_route_v1(gridEnv.init_pos, gridEnv.goal_pos,
+                                                  gridEnv.grid_graph, gridParameters['gridSize'])
+                route_time_end = time.time()  # Record route ending time
+                route_time += route_time_end - route_time_start
             else:
-                route, cost = a_star_route_v1(gridEnv.init_pos, gridEnv.goal_pos,
-                                              gridEnv.grid_graph, gridParameters['gridSize'])
-            route_time_end = time.time()  # Record route ending time
-            route_time += route_time_end - route_time_start
+                if arg.type == 0:
+                    route, cost = a_star_route(gridEnv.init_pos, gridEnv.goal_pos,
+                                               gridEnv.occupied_coord, gridParameters['gridSize'])
+                else:
+                    route, cost = a_star_route_v1(gridEnv.init_pos, gridEnv.goal_pos,
+                                                  gridEnv.grid_graph, gridParameters['gridSize'])
 
             # gridEnv.route = route
             gridEnv.set_route(route)
             gridEnv.cost = cost
 
-            modify_time_start = time.time()  # Record modify starting time
-            if arg.type == 0:
-                gridEnv.update()
+            if arg.trace:
+                modify_time_start = time.time()  # Record modify starting time
+                if arg.type == 0:
+                    gridEnv.update()
+                else:
+                    gridEnv.update_v1()
+                modify_time_end = time.time()  # Record modify ending time
+                modify_time += modify_time_end - modify_time_start
             else:
-                gridEnv.update_v1()
-            modify_time_end = time.time()  # Record modify ending time
-            modify_time += modify_time_end - modify_time_start
+                if arg.type == 0:
+                    gridEnv.update()
+                else:
+                    gridEnv.update_v1()
 
         benchmark_i += 1
         end_time = time.time()  # Record ending time
 
-        print("benchmark{i}".format(i=benchmark_i))
         print("benchmark{i} time = {t} s".format(i=benchmark_i, t=end_time - start_time))
-        print("benchmark{i} route time = {t} s".format(i=benchmark_i, t=route_time))
-        print("\tget neighbors time = {t} s".format(t=get_neighbors_time))
-        print("\tget neighbors number = {num}".format(num=get_neighbors_num))
-        print("\tadd neighbors time = {t} s".format(t=add_neighbors_time))
-        print("benchmark{i} modify time = {t} s".format(i=benchmark_i, t=modify_time))
-        print("benchmark{i} route length = {len}".format(i=benchmark_i, len=route_length(gridEnv.route_combo)))
-        print("benchmark{i} via amount = {num}\n".format(i=benchmark_i, num=via_amount(gridEnv.route_combo)))
-        # print("benchmark{i} via amount = {num} / {min}\n".format(i=benchmark_i, num=via_amount(gridEnv.route_combo),
-        #                                                          min=min_via_amount(gridEnv.netlist)))
-
-        print("benchmark{i}".format(i=benchmark_i), file=log)
         print("benchmark{i} time = {t} s".format(i=benchmark_i, t=end_time - start_time), file=log)
-        print("benchmark{i} route time = {t} s".format(i=benchmark_i, t=route_time), file=log)
-        print("\tget neighbors time = {t} s".format(t=get_neighbors_time), file=log)
-        print("\tget neighbors number = {num}".format(num=get_neighbors_num), file=log)
-        print("\tadd neighbors time = {t} s".format(t=add_neighbors_time), file=log)
-        print("benchmark{i} modify time = {t} s\n".format(i=benchmark_i, t=modify_time), file=log)
-        print("benchmark{i} route length = {len}".format(i=benchmark_i, len=route_length(gridEnv.route_combo)),
-              file=log)
-        print("benchmark{i} via amount = {num}\n".format(i=benchmark_i, num=via_amount(gridEnv.route_combo)), file=log)
-        # print("benchmark{i} via amount = {num} / {min}\n".format(i=benchmark_i, num=via_amount(gridEnv.route_combo),
-        #                                                          min=min_via_amount(gridEnv.netlist)), file=log)
+        if arg.trace:
+            print("benchmark{i}".format(i=benchmark_i))
+            print("benchmark{i} time = {t} s".format(i=benchmark_i, t=end_time - start_time))
+            print("benchmark{i} route time = {t} s".format(i=benchmark_i, t=route_time))
+            print("\tget neighbors time = {t} s".format(t=get_neighbors_time))
+            print("\tget neighbors number = {num}".format(num=get_neighbors_num))
+            print("\tadd neighbors time = {t} s".format(t=add_neighbors_time))
+            print("benchmark{i} modify time = {t} s".format(i=benchmark_i, t=modify_time))
+            print("benchmark{i} route length = {len}".format(i=benchmark_i, len=route_length(gridEnv.route_combo)))
+            print("benchmark{i} via amount = {num}\n".format(i=benchmark_i, num=via_amount(gridEnv.route_combo)))
+            # print("benchmark{i} via amount = {num} / {min}\n".format(i=benchmark_i,
+            #                                                          num=via_amount(gridEnv.route_combo),
+            #                                                          min=min_via_amount(gridEnv.netlist)))
+
+            print("benchmark{i}".format(i=benchmark_i), file=log)
+            print("benchmark{i} time = {t} s".format(i=benchmark_i, t=end_time - start_time), file=log)
+            print("benchmark{i} route time = {t} s".format(i=benchmark_i, t=route_time), file=log)
+            print("\tget neighbors time = {t} s".format(t=get_neighbors_time), file=log)
+            print("\tget neighbors number = {num}".format(num=get_neighbors_num), file=log)
+            print("\tadd neighbors time = {t} s".format(t=add_neighbors_time), file=log)
+            print("benchmark{i} modify time = {t} s\n".format(i=benchmark_i, t=modify_time), file=log)
+            print("benchmark{i} route length = {len}".format(i=benchmark_i, len=route_length(gridEnv.route_combo)),
+                  file=log)
+            print("benchmark{i} via amount = {num}\n".format(i=benchmark_i, num=via_amount(gridEnv.route_combo)), file=log)
+            # print("benchmark{i} via amount = {num} / {min}\n".format(i=benchmark_i,
+            #                                                          num=via_amount(gridEnv.route_combo),
+            #                                                          min=min_via_amount(gridEnv.netlist)), file=log)
 
     log.close()

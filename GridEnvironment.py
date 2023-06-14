@@ -17,6 +17,9 @@ class GridEnv:
         self.d_line = 1
         self.d = 2 * self.d_line + 1
 
+        self.pin_hsize = 2
+        self.pin_size = 2 * self.pin_hsize + 1
+
         self.twoPinNetCombo, self.twoPinNetNums, self.netlist = self.generate_two_pin_net()
 
         if type_ == 0:
@@ -119,10 +122,10 @@ class GridEnv:
         return occupied_dict
 
     def add_pin_effect(self, pin_x, pin_y, pin_z):
-        x_min = pin_x - self.d_line
-        x_max = pin_x + self.d_line + 1
-        y_min = pin_y - self.d_line
-        y_max = pin_y + self.d_line + 1
+        x_min = pin_x - self.pin_hsize
+        x_max = pin_x + self.pin_hsize + 1
+        y_min = pin_y - self.pin_hsize
+        y_max = pin_y + self.pin_hsize + 1
         if x_min < 0:
             x_min = 0
         if x_max > self.grid_size[0]:
@@ -135,10 +138,10 @@ class GridEnv:
         self.grid_graph[x_min:x_max, y_min:y_max, pin_z] += 1000
 
     def eliminate_pin_effect(self, pin_x, pin_y, pin_z):
-        x_min = pin_x - self.d_line
-        x_max = pin_x + self.d_line + 1
-        y_min = pin_y - self.d_line
-        y_max = pin_y + self.d_line + 1
+        x_min = pin_x - self.pin_hsize
+        x_max = pin_x + self.pin_hsize + 1
+        y_min = pin_y - self.pin_hsize
+        y_max = pin_y + self.pin_hsize + 1
         if x_min < 0:
             x_min = 0
         if x_max > self.grid_size[0]:
@@ -148,7 +151,6 @@ class GridEnv:
         if y_max > self.grid_size[1]:
             y_max = self.grid_size[1]
         # Del the cost of the specified pin
-        assert self.grid_graph[pin_x, pin_y, pin_z] != 0, "There is no pin to delete {}".format(self.twoPinNet_i)
         self.grid_graph[x_min:x_max, y_min:y_max, pin_z] -= 1000
 
     def generate_grid_graph(self):
@@ -160,10 +162,10 @@ class GridEnv:
                 y_coord = net_info[str(j + 1)][1]
                 z_coord = net_info[str(j + 1)][2]
 
-                x_min = x_coord - self.d_line
-                x_max = x_coord + self.d_line + 1
-                y_min = y_coord - self.d_line
-                y_max = y_coord + self.d_line + 1
+                x_min = x_coord - self.pin_hsize
+                x_max = x_coord + self.pin_hsize + 1
+                y_min = y_coord - self.pin_hsize
+                y_max = y_coord + self.pin_hsize + 1
                 if x_min < 0:
                     x_min = 0
                 if x_max > self.grid_size[0]:
