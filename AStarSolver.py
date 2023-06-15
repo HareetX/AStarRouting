@@ -54,7 +54,7 @@ class Item:
         self.g_score = g_score_with_cost
         self.f_score = self.g_score + self.h_score
 
-    def get_neighbors(self, occupied_msg, grid_size):
+    def get_neighbors(self, occupied_msg, net_pin_set, grid_size):
         x, y, z = self.cur_pos
         direct = None
         if self.parent is not None:
@@ -67,7 +67,9 @@ class Item:
             g_cost = 0
             if direct is not None and direct != [1, 0, 0]:
                 g_cost = 0.1  # bend cost
-            if pos != self.end_pos and str(pos) in occupied_msg:
+            if str(pos) in net_pin_set:
+                g_cost = -1
+            elif pos != self.end_pos and str(pos) in occupied_msg:
                 g_cost += occupied_msg[str(pos)]
             item = Item(pos, self.end_pos, self.g_score, g_cost + 1, self)
             neighbors.append(item)
@@ -77,7 +79,9 @@ class Item:
             g_cost = 0
             if direct is not None and direct != [1, 1, 0]:
                 g_cost = 0.1  # bend cost
-            if pos != self.end_pos and str(pos) in occupied_msg:
+            if str(pos) in net_pin_set:
+                g_cost = -1.414
+            elif pos != self.end_pos and str(pos) in occupied_msg:
                 g_cost += occupied_msg[str(pos)]
             item = Item(pos, self.end_pos, self.g_score, g_cost + 1.414, self)
             neighbors.append(item)
@@ -87,7 +91,9 @@ class Item:
             g_cost = 0
             if direct is not None and direct != [0, 1, 0]:
                 g_cost = 0.1  # bend cost
-            if pos != self.end_pos and str(pos) in occupied_msg:
+            if str(pos) in net_pin_set:
+                g_cost = -1
+            elif pos != self.end_pos and str(pos) in occupied_msg:
                 g_cost += occupied_msg[str(pos)]
             item = Item(pos, self.end_pos, self.g_score, g_cost + 1, self)
             neighbors.append(item)
@@ -97,7 +103,9 @@ class Item:
             g_cost = 0
             if direct is not None and direct != [-1, 1, 0]:
                 g_cost = 0.1  # bend cost
-            if pos != self.end_pos and str(pos) in occupied_msg:
+            if str(pos) in net_pin_set:
+                g_cost = -1.414
+            elif pos != self.end_pos and str(pos) in occupied_msg:
                 g_cost += occupied_msg[str(pos)]
             item = Item(pos, self.end_pos, self.g_score, g_cost + 1.414, self)
             neighbors.append(item)
@@ -107,7 +115,9 @@ class Item:
             g_cost = 0
             if direct is not None and direct != [-1, 0, 0]:
                 g_cost = 0.1  # bend cost
-            if pos != self.end_pos and str(pos) in occupied_msg:
+            if str(pos) in net_pin_set:
+                g_cost = -1
+            elif pos != self.end_pos and str(pos) in occupied_msg:
                 g_cost += occupied_msg[str(pos)]
             item = Item(pos, self.end_pos, self.g_score, g_cost + 1, self)
             neighbors.append(item)
@@ -117,7 +127,9 @@ class Item:
             g_cost = 0
             if direct is not None and direct != [-1, -1, 0]:
                 g_cost = 0.1  # bend cost
-            if pos != self.end_pos and str(pos) in occupied_msg:
+            if str(pos) in net_pin_set:
+                g_cost = -1.414
+            elif pos != self.end_pos and str(pos) in occupied_msg:
                 g_cost += occupied_msg[str(pos)]
             item = Item(pos, self.end_pos, self.g_score, g_cost + 1.414, self)
             neighbors.append(item)
@@ -127,7 +139,9 @@ class Item:
             g_cost = 0
             if direct is not None and direct != [0, -1, 0]:
                 g_cost = 0.1  # bend cost
-            if pos != self.end_pos and str(pos) in occupied_msg:
+            if str(pos) in net_pin_set:
+                g_cost = -1
+            elif pos != self.end_pos and str(pos) in occupied_msg:
                 g_cost += occupied_msg[str(pos)]
             item = Item(pos, self.end_pos, self.g_score, g_cost + 1, self)
             neighbors.append(item)
@@ -137,7 +151,9 @@ class Item:
             g_cost = 0
             if direct is not None and direct != [1, -1, 0]:
                 g_cost = 0.1  # bend cost
-            if pos != self.end_pos and str(pos) in occupied_msg:
+            if str(pos) in net_pin_set:
+                g_cost = -1.414
+            elif pos != self.end_pos and str(pos) in occupied_msg:
                 g_cost += occupied_msg[str(pos)]
             item = Item(pos, self.end_pos, self.g_score, g_cost + 1.414, self)
             neighbors.append(item)
@@ -146,7 +162,9 @@ class Item:
         if z < grid_size[2] - 1:
             pos = [x, y, z + 1]
             g_cost = 9  # go through a via need a high cost
-            if pos != self.end_pos and str(pos) in occupied_msg:
+            if str(pos) in net_pin_set:
+                g_cost = -1
+            elif pos != self.end_pos and str(pos) in occupied_msg:
                 g_cost = occupied_msg[str(pos)]
             item = Item(pos, self.end_pos, self.g_score, g_cost + 1, self)
             neighbors.append(item)
@@ -154,14 +172,16 @@ class Item:
         if z > 0:
             pos = [x, y, z - 1]
             g_cost = 9  # go through a via need a high cost
-            if pos != self.end_pos and str(pos) in occupied_msg:
+            if str(pos) in net_pin_set:
+                g_cost = -1
+            elif pos != self.end_pos and str(pos) in occupied_msg:
                 g_cost = occupied_msg[str(pos)]
             item = Item(pos, self.end_pos, self.g_score, g_cost + 1, self)
             neighbors.append(item)
 
         return neighbors
 
-    def get_neighbors_v1(self, grid_graph, grid_size):
+    def get_neighbors_v1(self, grid_graph, net_pin_set, grid_size):
         x, y, z = self.cur_pos
         direct = None
         if self.parent is not None:
@@ -176,7 +196,9 @@ class Item:
             g_cost = 0
             if direct is not None and direct != [1, 0, 0]:
                 g_cost = 0.1  # bend cost
-            if [next_x, next_y, next_z] != self.end_pos:
+            if str([next_x, next_y, next_z]) in net_pin_set:
+                g_cost = -1
+            elif [next_x, next_y, next_z] != self.end_pos:
                 g_cost += grid_graph[next_x, next_y, next_z]
             item = Item([next_x, next_y, next_z], self.end_pos, self.g_score, g_cost + 1, self)
             neighbors.append(item)
@@ -188,7 +210,9 @@ class Item:
             g_cost = 0
             if direct is not None and direct != [1, 1, 0]:
                 g_cost = 0.1  # bend cost
-            if [next_x, next_y, next_z] != self.end_pos:
+            if str([next_x, next_y, next_z]) in net_pin_set:
+                g_cost = -1.414
+            elif [next_x, next_y, next_z] != self.end_pos:
                 g_cost += grid_graph[next_x, next_y, next_z]
             item = Item([next_x, next_y, next_z], self.end_pos, self.g_score, g_cost + 1.414, self)
             neighbors.append(item)
@@ -200,7 +224,9 @@ class Item:
             g_cost = 0
             if direct is not None and direct != [0, 1, 0]:
                 g_cost = 0.1  # bend cost
-            if [next_x, next_y, next_z] != self.end_pos:
+            if str([next_x, next_y, next_z]) in net_pin_set:
+                g_cost = -1
+            elif [next_x, next_y, next_z] != self.end_pos:
                 g_cost += grid_graph[next_x, next_y, next_z]
             item = Item([next_x, next_y, next_z], self.end_pos, self.g_score, g_cost + 1, self)
             neighbors.append(item)
@@ -212,7 +238,9 @@ class Item:
             g_cost = 0
             if direct is not None and direct != [-1, 1, 0]:
                 g_cost = 0.1  # bend cost
-            if [next_x, next_y, next_z] != self.end_pos:
+            if str([next_x, next_y, next_z]) in net_pin_set:
+                g_cost = -1.414
+            elif [next_x, next_y, next_z] != self.end_pos:
                 g_cost += grid_graph[next_x, next_y, next_z]
             item = Item([next_x, next_y, next_z], self.end_pos, self.g_score, g_cost + 1.414, self)
             neighbors.append(item)
@@ -224,7 +252,9 @@ class Item:
             g_cost = 0
             if direct is not None and direct != [-1, 0, 0]:
                 g_cost = 0.1  # bend cost
-            if [next_x, next_y, next_z] != self.end_pos:
+            if str([next_x, next_y, next_z]) in net_pin_set:
+                g_cost = -1
+            elif [next_x, next_y, next_z] != self.end_pos:
                 g_cost += grid_graph[next_x, next_y, next_z]
             item = Item([next_x, next_y, next_z], self.end_pos, self.g_score, g_cost + 1, self)
             neighbors.append(item)
@@ -236,7 +266,9 @@ class Item:
             g_cost = 0
             if direct is not None and direct != [-1, -1, 0]:
                 g_cost = 0.1  # bend cost
-            if [next_x, next_y, next_z] != self.end_pos:
+            if str([next_x, next_y, next_z]) in net_pin_set:
+                g_cost = -1.414
+            elif [next_x, next_y, next_z] != self.end_pos:
                 g_cost += grid_graph[next_x, next_y, next_z]
             item = Item([next_x, next_y, next_z], self.end_pos, self.g_score, g_cost + 1.414, self)
             neighbors.append(item)
@@ -248,7 +280,9 @@ class Item:
             g_cost = 0
             if direct is not None and direct != [0, -1, 0]:
                 g_cost = 0.1  # bend cost
-            if [next_x, next_y, next_z] != self.end_pos:
+            if str([next_x, next_y, next_z]) in net_pin_set:
+                g_cost = -1
+            elif [next_x, next_y, next_z] != self.end_pos:
                 g_cost += grid_graph[next_x, next_y, next_z]
             item = Item([next_x, next_y, next_z], self.end_pos, self.g_score, g_cost + 1, self)
             neighbors.append(item)
@@ -260,7 +294,9 @@ class Item:
             g_cost = 0
             if direct is not None and direct != [1, -1, 0]:
                 g_cost = 0.1  # bend cost
-            if [next_x, next_y, next_z] != self.end_pos:
+            if str([next_x, next_y, next_z]) in net_pin_set:
+                g_cost = -1.414
+            elif [next_x, next_y, next_z] != self.end_pos:
                 g_cost += grid_graph[next_x, next_y, next_z]
             item = Item([next_x, next_y, next_z], self.end_pos, self.g_score, g_cost + 1.414, self)
             neighbors.append(item)
@@ -271,7 +307,9 @@ class Item:
             next_y = y
             next_z = z + 1
             g_cost = 0
-            if [next_x, next_y, next_z] != self.end_pos:
+            if str([next_x, next_y, next_z]) in net_pin_set:
+                g_cost = -10
+            elif [next_x, next_y, next_z] != self.end_pos:
                 g_cost += grid_graph[next_x, next_y, next_z]
             item = Item([next_x, next_y, next_z], self.end_pos, self.g_score,
                         g_cost + 10, self)  # go through a via need a high cost
@@ -282,7 +320,9 @@ class Item:
             next_y = y
             next_z = z - 1
             g_cost = 0
-            if [next_x, next_y, next_z] != self.end_pos:
+            if str([next_x, next_y, next_z]) in net_pin_set:
+                g_cost = -10
+            elif [next_x, next_y, next_z] != self.end_pos:
                 g_cost += grid_graph[next_x, next_y, next_z]
             item = Item([next_x, next_y, next_z], self.end_pos, self.g_score,
                         g_cost + 10, self)  # go through a via need a high cost
@@ -307,7 +347,7 @@ global add_neighbors_time
 global get_neighbors_num
 
 
-def a_star_route(start, end, occupied_msg, grid_size):
+def a_star_route(start, end, occupied_msg, net_pin_set, grid_size):
     # arg = solver_arguments()
     # if arg.trace:
     global get_neighbors_time, add_neighbors_time, get_neighbors_num
@@ -333,7 +373,7 @@ def a_star_route(start, end, occupied_msg, grid_size):
                 get_neighbors_time += get_neighbors_time_end - get_neighbors_time_start
                 get_neighbors_num += 1
             else:
-                neighbor_list = cur_item.get_neighbors(occupied_msg, grid_size)
+                neighbor_list = cur_item.get_neighbors(occupied_msg, net_pin_set, grid_size)
 
             if arg.trace:
                 add_neighbors_time_start = time.time()
@@ -392,7 +432,7 @@ def a_star_route(start, end, occupied_msg, grid_size):
                     #     heapq.heappush(open_set, neighbor)
 
 
-def a_star_route_v1(start, end, grid_graph, grid_size):
+def a_star_route_v1(start, end, grid_graph, net_pin_set, grid_size):
     # arg = solver_arguments()
     # if arg.trace:
     global get_neighbors_time, add_neighbors_time, get_neighbors_num
@@ -418,7 +458,7 @@ def a_star_route_v1(start, end, grid_graph, grid_size):
                 get_neighbors_time += get_neighbors_time_end - get_neighbors_time_start
                 get_neighbors_num += 1
             else:
-                neighbor_list = cur_item.get_neighbors_v1(grid_graph, grid_size)
+                neighbor_list = cur_item.get_neighbors_v1(grid_graph, net_pin_set, grid_size)
 
             if arg.trace:
                 add_neighbors_time_start = time.time()
@@ -548,34 +588,36 @@ if __name__ == '__main__':
             else:
                 if arg.type == 0:
                     route, cost = a_star_route(gridEnv.init_pos, gridEnv.goal_pos,
-                                               gridEnv.occupied_coord, gridParameters['gridSize'])
+                                               gridEnv.occupied_coord, gridEnv.netPinSet, gridParameters['gridSize'])
                 else:
                     route, cost = a_star_route_v1(gridEnv.init_pos, gridEnv.goal_pos,
-                                                  gridEnv.grid_graph, gridParameters['gridSize'])
+                                                  gridEnv.grid_graph, gridEnv.netPinSet, gridParameters['gridSize'])
 
             # gridEnv.route = route
-            gridEnv.set_route(route)
-            gridEnv.cost = cost
+            # gridEnv.set_route(route)
+            # gridEnv.cost = cost
 
             if arg.trace:
                 modify_time_start = time.time()  # Record modify starting time
                 if arg.type == 0:
-                    gridEnv.update()
+                    gridEnv.update(route, cost)
                 else:
-                    gridEnv.update_v1()
+                    gridEnv.update_v1(route, cost)
                 modify_time_end = time.time()  # Record modify ending time
                 modify_time += modify_time_end - modify_time_start
             else:
                 if arg.type == 0:
-                    gridEnv.update()
+                    gridEnv.update(route, cost)
                 else:
-                    gridEnv.update_v1()
+                    gridEnv.update_v1(route, cost)
 
         benchmark_i += 1
         end_time = time.time()  # Record ending time
 
         print("benchmark{i} time = {t} s".format(i=benchmark_i, t=end_time - start_time))
+        print("\tcost = {c}\n".format(c=gridEnv.route_cost))
         print("benchmark{i} time = {t} s".format(i=benchmark_i, t=end_time - start_time), file=log)
+        print("\tcost = {c}\n".format(c=gridEnv.route_cost), file=log)
         if arg.trace:
             print("benchmark{i}".format(i=benchmark_i))
             print("benchmark{i} time = {t} s".format(i=benchmark_i, t=end_time - start_time))

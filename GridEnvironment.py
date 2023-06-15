@@ -17,7 +17,7 @@ class GridEnv:
         self.d_line = 1
         self.d = 2 * self.d_line + 1
 
-        self.pin_hsize = 2
+        self.pin_hsize = 1
         self.pin_size = 2 * self.pin_hsize + 1
 
         self.twoPinNetCombo, self.twoPinNetNums, self.netlist = self.generate_two_pin_net()
@@ -35,9 +35,13 @@ class GridEnv:
         self.goal_pos = None
 
         self.twoPinNet_i = 0
+        self.multiPinNet_i = 0
+        self.netPinSet = set([])
+        self.netPinRoute = []
+        self.old_netPinRoute = []
         self.route = []
         self.old_route = []
-        self.cost = 1000  # Large Enough
+        self.cost = 0
 
         self.episode = 0
 
@@ -60,6 +64,7 @@ class GridEnv:
         two_pin_net_nums = []
         two_pin_set = []
         two_pin_nets = []
+        two_pin_nets_combo = []
         for i in range(self.num_net):
             netlist_len = len(netlist[i])
             two_pin_net_nums.append(netlist_len - 1)
@@ -79,14 +84,17 @@ class GridEnv:
                 if two_pin_set[j][0][1] not in fetched_pins:
                     not_loop = True
                     fetched_pins.append(two_pin_set[j][0][1])
+                if len(fetched_pins) >= netlist_len:
+                    not_loop = True
                 if not_loop:
                     two_pin_nets.append(two_pin_set[j][0])
-                if len(fetched_pins) >= netlist_len:
+                if len(two_pin_nets) >= netlist_len - 1:
                     break
-
+            two_pin_nets_combo.append(two_pin_nets)
+            two_pin_nets = []
             two_pin_set = []
 
-        return two_pin_nets, two_pin_net_nums, netlist
+        return two_pin_nets_combo, two_pin_net_nums, netlist
 
     def generate_occupied_coord(self):
         occupied_dict = {}
@@ -97,10 +105,10 @@ class GridEnv:
                 y_coord = net_info[str(j + 1)][1]
                 z_coord = net_info[str(j + 1)][2]
 
-                x_min = x_coord - self.d_line
-                x_max = x_coord + self.d_line + 1
-                y_min = y_coord - self.d_line
-                y_max = y_coord + self.d_line + 1
+                x_min = x_coord - self.pin_hsize
+                x_max = x_coord + self.pin_hsize + 1
+                y_min = y_coord - self.pin_hsize
+                y_max = y_coord + self.pin_hsize + 1
                 if x_min < 0:
                     x_min = 0
                 if x_max > self.grid_size[0]:
@@ -135,9 +143,52 @@ class GridEnv:
         if y_max > self.grid_size[1]:
             y_max = self.grid_size[1]
         # Add the cost of the specified pin
+        for x_i in range(x_max - x_min):
+            for y_i in range(y_max - y_min):
+                hide_pos = [x_min + x_i, y_min + y_i, pin_z]
+                if str(hide_pos) in self.occupied_coord:
+                    self.occupied_coord[str(hide_pos)] += 1000
+                else:
+                    self.occupied_coord[str(hide_pos)] = 1000  # Large Enough
+
+    def add_pin_effect_v1(self, pin_x, pin_y, pin_z):
+        x_min = pin_x - self.pin_hsize
+        x_max = pin_x + self.pin_hsize + 1
+        y_min = pin_y - self.pin_hsize
+        y_max = pin_y + self.pin_hsize + 1
+        if x_min < 0:
+            x_min = 0
+        if x_max > self.grid_size[0]:
+            x_max = self.grid_size[0]
+        if y_min < 0:
+            y_min = 0
+        if y_max > self.grid_size[1]:
+            y_max = self.grid_size[1]
+        # Add the cost of the specified pin
         self.grid_graph[x_min:x_max, y_min:y_max, pin_z] += 1000
 
     def eliminate_pin_effect(self, pin_x, pin_y, pin_z):
+        x_min = pin_x - self.pin_hsize
+        x_max = pin_x + self.pin_hsize + 1
+        y_min = pin_y - self.pin_hsize
+        y_max = pin_y + self.pin_hsize + 1
+        if x_min < 0:
+            x_min = 0
+        if x_max > self.grid_size[0]:
+            x_max = self.grid_size[0]
+        if y_min < 0:
+            y_min = 0
+        if y_max > self.grid_size[1]:
+            y_max = self.grid_size[1]
+        # Del the cost of the specified pin
+        for x_i in range(x_max - x_min):
+            for y_i in range(y_max - y_min):
+                hide_pos = [x_min + x_i, y_min + y_i, pin_z]
+                self.occupied_coord[str(hide_pos)] -= 1000
+                if self.occupied_coord[str(hide_pos)] <= 0:
+                    del self.occupied_coord[str(hide_pos)]
+
+    def eliminate_pin_effect_v1(self, pin_x, pin_y, pin_z):
         x_min = pin_x - self.pin_hsize
         x_max = pin_x + self.pin_hsize + 1
         y_min = pin_y - self.pin_hsize
@@ -194,10 +245,10 @@ class GridEnv:
                 if direct_0 != direct_1:
                     self.route.append(origin_route[i])
 
-    def add_occupied_coord(self):
-        for i in range(len(self.route) - 1):
-            x_0, y_0, z_0 = self.route[i]
-            x_1, y_1, z_1 = self.route[i + 1]
+    def add_occupied_coord(self, route):
+        for i in range(len(route) - 1):
+            x_0, y_0, z_0 = route[i]
+            x_1, y_1, z_1 = route[i + 1]
             direct = [x_1 - x_0, y_1 - y_0, z_1 - z_0]
             if direct[0] == 0:
                 x_max = x_0 + self.d_line + 1
@@ -314,133 +365,10 @@ class GridEnv:
                     x_0 += delta_x
                     y_0 += delta_y
 
-            # if i > 0:
-            #     hide_pos_1 = None
-            #     hide_pos_2 = None
-            #     hide_pos_3 = None
-            #     hide_pos_4 = None
-            #     hide_pos_5 = None
-            #     hide_pos_6 = None
-            #     hide_pos_7 = None
-            #     hide_pos_8 = None
-            #     hide_pos_1_ = None
-            #     hide_pos_2_ = None
-            #     hide_pos_3_ = None
-            #     hide_pos_4_ = None
-            #     hide_pos_5_ = None
-            #     hide_pos_6_ = None
-            #     hide_pos_7_ = None
-            #     hide_pos_8_ = None
-            #     if self.route[i][0] - self.route[i-1][0] == -1 and self.route[i][1] - self.route[i-1][1] == 1:
-            #         hide_pos_1 = [self.route[i][0] + 1, self.route[i][1], self.route[i][2]]
-            #         hide_pos_2 = [self.route[i][0], self.route[i][1] - 1, self.route[i][2]]
-            #     elif self.route[i][0] - self.route[i-1][0] == -1 and self.route[i][1] - self.route[i-1][1] == -1:
-            #         hide_pos_1 = [self.route[i][0] + 1, self.route[i][1], self.route[i][2]]
-            #         hide_pos_2 = [self.route[i][0], self.route[i][1] + 1, self.route[i][2]]
-            #     elif self.route[i][0] - self.route[i-1][0] == 1 and self.route[i][1] - self.route[i-1][1] == 1:
-            #         hide_pos_1 = [self.route[i][0] - 1, self.route[i][1], self.route[i][2]]
-            #         hide_pos_2 = [self.route[i][0], self.route[i][1] - 1, self.route[i][2]]
-            #     elif self.route[i][0] - self.route[i-1][0] == 1 and self.route[i][1] - self.route[i-1][1] == -1:
-            #         hide_pos_1 = [self.route[i][0] - 1, self.route[i][1], self.route[i][2]]
-            #         hide_pos_2 = [self.route[i][0], self.route[i][1] + 1, self.route[i][2]]
-            #     elif abs(self.route[i][0] - self.route[i-1][0]) == 1 and self.route[i][1] - self.route[i-1][1] == 0:
-            #         hide_pos_1 = [self.route[i][0], self.route[i][1] + 1, self.route[i][2]]
-            #         hide_pos_2 = [self.route[i][0], self.route[i][1] + 1, self.route[i][2]]
-            #     elif self.route[i][0] - self.route[i-1][0] == 0 and abs(self.route[i][1] - self.route[i-1][1]) == 1:
-            #         hide_pos_1 = [self.route[i][0] + 1, self.route[i][1], self.route[i][2]]
-            #         hide_pos_2 = [self.route[i][0] + 1, self.route[i][1], self.route[i][2]]
-            #     elif self.route[i][0] - self.route[i-1][0] == 0 and self.route[i][1] - self.route[i-1][1] == 0:
-            #         hide_pos_1 = [self.route[i][0] + 1, self.route[i][1], self.route[i][2]]
-            #         hide_pos_2 = [self.route[i][0] - 1, self.route[i][1], self.route[i][2]]
-            #         hide_pos_3 = [self.route[i][0], self.route[i][1] + 1, self.route[i][2]]
-            #         hide_pos_4 = [self.route[i][0], self.route[i][1] - 1, self.route[i][2]]
-            #         hide_pos_5 = [self.route[i][0] + 1, self.route[i][1] - 1, self.route[i][2]]
-            #         hide_pos_6 = [self.route[i][0] + 1, self.route[i][1] + 1, self.route[i][2]]
-            #         hide_pos_7 = [self.route[i][0] - 1, self.route[i][1] - 1, self.route[i][2]]
-            #         hide_pos_8 = [self.route[i][0] - 1, self.route[i][1] + 1, self.route[i][2]]
-            #         hide_pos_1_ = [self.route[i][0] + 1, self.route[i][1], self.route[i-1][2]]
-            #         hide_pos_2_ = [self.route[i][0] - 1, self.route[i][1], self.route[i-1][2]]
-            #         hide_pos_3_ = [self.route[i][0], self.route[i][1] + 1, self.route[i-1][2]]
-            #         hide_pos_4_ = [self.route[i][0], self.route[i][1] - 1, self.route[i-1][2]]
-            #         hide_pos_5_ = [self.route[i][0] + 1, self.route[i][1] - 1, self.route[i-1][2]]
-            #         hide_pos_6_ = [self.route[i][0] + 1, self.route[i][1] + 1, self.route[i-1][2]]
-            #         hide_pos_7_ = [self.route[i][0] - 1, self.route[i][1] - 1, self.route[i-1][2]]
-            #         hide_pos_8_ = [self.route[i][0] - 1, self.route[i][1] + 1, self.route[i-1][2]]
-            #     if hide_pos_1 is not None and hide_pos_2 is not None:
-            #         if str(hide_pos_1) in self.occupied_coord:
-            #             self.occupied_coord[str(hide_pos_1)] += 1000
-            #         else:
-            #             self.occupied_coord[str(hide_pos_1)] = 1000  # Large Enough
-            #         if str(hide_pos_2) in self.occupied_coord:
-            #             self.occupied_coord[str(hide_pos_2)] += 1000
-            #         else:
-            #             self.occupied_coord[str(hide_pos_2)] = 1000  # Large Enough
-            #         if hide_pos_3 is not None:
-            #             if str(hide_pos_3) in self.occupied_coord:
-            #                 self.occupied_coord[str(hide_pos_3)] += 1000
-            #             else:
-            #                 self.occupied_coord[str(hide_pos_3)] = 1000  # Large Enough
-            #             if str(hide_pos_4) in self.occupied_coord:
-            #                 self.occupied_coord[str(hide_pos_4)] += 1000
-            #             else:
-            #                 self.occupied_coord[str(hide_pos_4)] = 1000  # Large Enough
-            #             if str(hide_pos_5) in self.occupied_coord:
-            #                 self.occupied_coord[str(hide_pos_5)] += 1000
-            #             else:
-            #                 self.occupied_coord[str(hide_pos_5)] = 1000  # Large Enough
-            #             if str(hide_pos_6) in self.occupied_coord:
-            #                 self.occupied_coord[str(hide_pos_6)] += 1000
-            #             else:
-            #                 self.occupied_coord[str(hide_pos_6)] = 1000  # Large Enough
-            #             if str(hide_pos_7) in self.occupied_coord:
-            #                 self.occupied_coord[str(hide_pos_7)] += 1000
-            #             else:
-            #                 self.occupied_coord[str(hide_pos_7)] = 1000  # Large Enough
-            #             if str(hide_pos_8) in self.occupied_coord:
-            #                 self.occupied_coord[str(hide_pos_8)] += 1000
-            #             else:
-            #                 self.occupied_coord[str(hide_pos_8)] = 1000  # Large Enough
-            #             if str(hide_pos_1_) in self.occupied_coord:
-            #                 self.occupied_coord[str(hide_pos_1_)] += 1000
-            #             else:
-            #                 self.occupied_coord[str(hide_pos_1_)] = 1000  # Large Enough
-            #             if str(hide_pos_2_) in self.occupied_coord:
-            #                 self.occupied_coord[str(hide_pos_2_)] += 1000
-            #             else:
-            #                 self.occupied_coord[str(hide_pos_2_)] = 1000  # Large Enough
-            #             if str(hide_pos_3_) in self.occupied_coord:
-            #                 self.occupied_coord[str(hide_pos_3_)] += 1000
-            #             else:
-            #                 self.occupied_coord[str(hide_pos_3_)] = 1000  # Large Enough
-            #             if str(hide_pos_4_) in self.occupied_coord:
-            #                 self.occupied_coord[str(hide_pos_4_)] += 1000
-            #             else:
-            #                 self.occupied_coord[str(hide_pos_4_)] = 1000  # Large Enough
-            #             if str(hide_pos_5_) in self.occupied_coord:
-            #                 self.occupied_coord[str(hide_pos_5_)] += 1000
-            #             else:
-            #                 self.occupied_coord[str(hide_pos_5_)] = 1000  # Large Enough
-            #             if str(hide_pos_6_) in self.occupied_coord:
-            #                 self.occupied_coord[str(hide_pos_6_)] += 1000
-            #             else:
-            #                 self.occupied_coord[str(hide_pos_6_)] = 1000  # Large Enough
-            #             if str(hide_pos_7_) in self.occupied_coord:
-            #                 self.occupied_coord[str(hide_pos_7_)] += 1000
-            #             else:
-            #                 self.occupied_coord[str(hide_pos_7_)] = 1000  # Large Enough
-            #             if str(hide_pos_8_) in self.occupied_coord:
-            #                 self.occupied_coord[str(hide_pos_8_)] += 1000
-            #             else:
-            #                 self.occupied_coord[str(hide_pos_8_)] = 1000  # Large Enough
-            # if str(self.route[i]) in self.occupied_coord:
-            #     self.occupied_coord[str(self.route[i])] += 1000
-            # else:
-            #     self.occupied_coord[str(self.route[i])] = 1000  # Large Enough
-
-    def add_route_occupied(self):
-        for i in range(len(self.route) - 1):
-            x_0, y_0, z_0 = self.route[i]
-            x_1, y_1, z_1 = self.route[i + 1]
+    def add_route_occupied(self, route):
+        for i in range(len(route) - 1):
+            x_0, y_0, z_0 = route[i]
+            x_1, y_1, z_1 = route[i + 1]
             direct = [x_1 - x_0, y_1 - y_0, z_1 - z_0]
             if direct[0] == 0:
                 x_max = x_0 + self.d_line + 1
@@ -537,10 +465,10 @@ class GridEnv:
                     x_0 += delta_x
                     y_0 += delta_y
 
-    def del_occupied_coord(self):
-        for i in range(len(self.old_route) - 1):
-            x_0, y_0, z_0 = self.old_route[i]
-            x_1, y_1, z_1 = self.old_route[i + 1]
+    def del_occupied_coord(self, old_route):
+        for i in range(len(old_route) - 1):
+            x_0, y_0, z_0 = old_route[i]
+            x_1, y_1, z_1 = old_route[i + 1]
             direct = [x_1 - x_0, y_1 - y_0, z_1 - z_0]
             if direct[0] == 0:
                 x_max = x_0 + self.d_line + 1
@@ -647,116 +575,10 @@ class GridEnv:
                     x_0 += delta_x
                     y_0 += delta_y
 
-            # if i > 0:
-            #     hide_pos_1 = None
-            #     hide_pos_2 = None
-            #     hide_pos_3 = None
-            #     hide_pos_4 = None
-            #     hide_pos_5 = None
-            #     hide_pos_6 = None
-            #     hide_pos_7 = None
-            #     hide_pos_8 = None
-            #     hide_pos_1_ = None
-            #     hide_pos_2_ = None
-            #     hide_pos_3_ = None
-            #     hide_pos_4_ = None
-            #     hide_pos_5_ = None
-            #     hide_pos_6_ = None
-            #     hide_pos_7_ = None
-            #     hide_pos_8_ = None
-            #     if self.old_route[i][0] - self.old_route[i - 1][0] == -1 and self.old_route[i][1] - self.old_route[i - 1][1] == 1:
-            #         hide_pos_1 = [self.old_route[i][0] + 1, self.old_route[i][1], self.old_route[i][2]]
-            #         hide_pos_2 = [self.old_route[i][0], self.old_route[i][1] - 1, self.old_route[i][2]]
-            #     elif self.old_route[i][0] - self.old_route[i - 1][0] == -1 and self.old_route[i][1] - self.old_route[i - 1][1] == -1:
-            #         hide_pos_1 = [self.old_route[i][0] + 1, self.old_route[i][1], self.old_route[i][2]]
-            #         hide_pos_2 = [self.old_route[i][0], self.old_route[i][1] + 1, self.old_route[i][2]]
-            #     elif self.old_route[i][0] - self.old_route[i - 1][0] == 1 and self.old_route[i][1] - self.old_route[i - 1][1] == 1:
-            #         hide_pos_1 = [self.old_route[i][0] - 1, self.old_route[i][1], self.old_route[i][2]]
-            #         hide_pos_2 = [self.old_route[i][0], self.old_route[i][1] - 1, self.old_route[i][2]]
-            #     elif self.old_route[i][0] - self.old_route[i - 1][0] == 1 and self.old_route[i][1] - self.old_route[i - 1][1] == -1:
-            #         hide_pos_1 = [self.old_route[i][0] - 1, self.old_route[i][1], self.old_route[i][2]]
-            #         hide_pos_2 = [self.old_route[i][0], self.old_route[i][1] + 1, self.old_route[i][2]]
-            #     elif abs(self.old_route[i][0] - self.old_route[i - 1][0]) == 1 and self.old_route[i][1] - self.old_route[i - 1][1] == 0:
-            #         hide_pos_1 = [self.old_route[i][0], self.old_route[i][1] + 1, self.old_route[i][2]]
-            #         hide_pos_2 = [self.old_route[i][0], self.old_route[i][1] + 1, self.old_route[i][2]]
-            #     elif self.old_route[i][0] - self.old_route[i - 1][0] == 0 and abs(self.old_route[i][1] - self.old_route[i - 1][1]) == 1:
-            #         hide_pos_1 = [self.old_route[i][0] + 1, self.old_route[i][1], self.old_route[i][2]]
-            #         hide_pos_2 = [self.old_route[i][0] + 1, self.old_route[i][1], self.old_route[i][2]]
-            #     elif self.old_route[i][0] - self.old_route[i-1][0] == 0 and self.old_route[i][1] - self.old_route[i-1][1] == 0:
-            #         hide_pos_1 = [self.old_route[i][0] + 1, self.old_route[i][1], self.old_route[i][2]]
-            #         hide_pos_2 = [self.old_route[i][0] - 1, self.old_route[i][1], self.old_route[i][2]]
-            #         hide_pos_3 = [self.old_route[i][0], self.old_route[i][1] + 1, self.old_route[i][2]]
-            #         hide_pos_4 = [self.old_route[i][0], self.old_route[i][1] - 1, self.old_route[i][2]]
-            #         hide_pos_5 = [self.old_route[i][0] + 1, self.old_route[i][1] - 1, self.old_route[i][2]]
-            #         hide_pos_6 = [self.old_route[i][0] + 1, self.old_route[i][1] + 1, self.old_route[i][2]]
-            #         hide_pos_7 = [self.old_route[i][0] - 1, self.old_route[i][1] - 1, self.old_route[i][2]]
-            #         hide_pos_8 = [self.old_route[i][0] - 1, self.old_route[i][1] + 1, self.old_route[i][2]]
-            #         hide_pos_1_ = [self.old_route[i][0] + 1, self.old_route[i][1], self.old_route[i-1][2]]
-            #         hide_pos_2_ = [self.old_route[i][0] - 1, self.old_route[i][1], self.old_route[i-1][2]]
-            #         hide_pos_3_ = [self.old_route[i][0], self.old_route[i][1] + 1, self.old_route[i-1][2]]
-            #         hide_pos_4_ = [self.old_route[i][0], self.old_route[i][1] - 1, self.old_route[i-1][2]]
-            #         hide_pos_5_ = [self.old_route[i][0] + 1, self.old_route[i][1] - 1, self.old_route[i-1][2]]
-            #         hide_pos_6_ = [self.old_route[i][0] + 1, self.old_route[i][1] + 1, self.old_route[i-1][2]]
-            #         hide_pos_7_ = [self.old_route[i][0] - 1, self.old_route[i][1] - 1, self.old_route[i-1][2]]
-            #         hide_pos_8_ = [self.old_route[i][0] - 1, self.old_route[i][1] + 1, self.old_route[i-1][2]]
-            #     if hide_pos_1 is not None and hide_pos_2 is not None:
-            #         self.occupied_coord[str(hide_pos_1)] -= 1000
-            #         if self.occupied_coord[str(hide_pos_1)] == 0:
-            #             del self.occupied_coord[str(hide_pos_1)]
-            #         self.occupied_coord[str(hide_pos_2)] -= 1000
-            #         if self.occupied_coord[str(hide_pos_2)] == 0:
-            #             del self.occupied_coord[str(hide_pos_2)]
-            #         if hide_pos_3 is not None:
-            #             self.occupied_coord[str(hide_pos_3)] -= 1000
-            #             if self.occupied_coord[str(hide_pos_3)] == 0:
-            #                 del self.occupied_coord[str(hide_pos_3)]
-            #             self.occupied_coord[str(hide_pos_4)] -= 1000
-            #             if self.occupied_coord[str(hide_pos_4)] == 0:
-            #                 del self.occupied_coord[str(hide_pos_4)]
-            #             self.occupied_coord[str(hide_pos_5)] -= 1000
-            #             if self.occupied_coord[str(hide_pos_5)] == 0:
-            #                 del self.occupied_coord[str(hide_pos_5)]
-            #             self.occupied_coord[str(hide_pos_6)] -= 1000
-            #             if self.occupied_coord[str(hide_pos_6)] == 0:
-            #                 del self.occupied_coord[str(hide_pos_6)]
-            #             self.occupied_coord[str(hide_pos_7)] -= 1000
-            #             if self.occupied_coord[str(hide_pos_7)] == 0:
-            #                 del self.occupied_coord[str(hide_pos_7)]
-            #             self.occupied_coord[str(hide_pos_8)] -= 1000
-            #             if self.occupied_coord[str(hide_pos_8)] == 0:
-            #                 del self.occupied_coord[str(hide_pos_8)]
-            #             self.occupied_coord[str(hide_pos_1_)] -= 1000
-            #             if self.occupied_coord[str(hide_pos_1_)] == 0:
-            #                 del self.occupied_coord[str(hide_pos_1_)]
-            #             self.occupied_coord[str(hide_pos_2_)] -= 1000
-            #             if self.occupied_coord[str(hide_pos_2_)] == 0:
-            #                 del self.occupied_coord[str(hide_pos_2_)]
-            #             self.occupied_coord[str(hide_pos_3_)] -= 1000
-            #             if self.occupied_coord[str(hide_pos_3_)] == 0:
-            #                 del self.occupied_coord[str(hide_pos_3_)]
-            #             self.occupied_coord[str(hide_pos_4_)] -= 1000
-            #             if self.occupied_coord[str(hide_pos_4_)] == 0:
-            #                 del self.occupied_coord[str(hide_pos_4_)]
-            #             self.occupied_coord[str(hide_pos_5_)] -= 1000
-            #             if self.occupied_coord[str(hide_pos_5_)] == 0:
-            #                 del self.occupied_coord[str(hide_pos_5_)]
-            #             self.occupied_coord[str(hide_pos_6_)] -= 1000
-            #             if self.occupied_coord[str(hide_pos_6_)] == 0:
-            #                 del self.occupied_coord[str(hide_pos_6_)]
-            #             self.occupied_coord[str(hide_pos_7_)] -= 1000
-            #             if self.occupied_coord[str(hide_pos_7_)] == 0:
-            #                 del self.occupied_coord[str(hide_pos_7_)]
-            #             self.occupied_coord[str(hide_pos_8_)] -= 1000
-            #             if self.occupied_coord[str(hide_pos_8_)] == 0:
-            #                 del self.occupied_coord[str(hide_pos_8_)]
-            # self.occupied_coord[str(self.old_route[i])] -= 1000
-            # if self.occupied_coord[str(self.old_route[i])] == 0:
-            #     del self.occupied_coord[str(self.old_route[i])]
-
-    def del_route_occupied(self):
-        for i in range(len(self.old_route) - 1):
-            x_0, y_0, z_0 = self.old_route[i]
-            x_1, y_1, z_1 = self.old_route[i + 1]
+    def del_route_occupied(self, old_route):
+        for i in range(len(old_route) - 1):
+            x_0, y_0, z_0 = old_route[i]
+            x_1, y_1, z_1 = old_route[i + 1]
             direct = [x_1 - x_0, y_1 - y_0, z_1 - z_0]
             if direct[0] == 0:
                 x_max = x_0 + self.d_line + 1
@@ -847,31 +669,91 @@ class GridEnv:
                     x_0 += delta_x
                     y_0 += delta_y
 
-    def update(self):
-        if self.episode > 0:
-            if self.cost > self.route_cost[self.twoPinNet_i - 1]:
-                self.route = self.old_route
-                self.cost = self.route_cost[self.twoPinNet_i - 1]
-            self.add_occupied_coord()
-            self.route_combo[self.twoPinNet_i - 1] = self.route
-            self.route_cost[self.twoPinNet_i - 1] = self.cost
-        else:
-            self.add_occupied_coord()
-            self.route_combo.append(self.route)
-            self.route_cost.append(self.cost)
+    def update(self, single_route, single_cost):
+        self.set_route(single_route)
+        self.cost += single_cost
 
-    def update_v1(self):
-        if self.episode > 0:
-            if self.cost > self.route_cost[self.twoPinNet_i - 1]:
-                self.route = self.old_route
-                self.cost = self.route_cost[self.twoPinNet_i - 1]
-            self.route_combo[self.twoPinNet_i - 1] = self.route
-            self.route_cost[self.twoPinNet_i - 1] = self.cost
-        else:
-            self.route_combo.append(self.route)
-            self.route_cost.append(self.cost)
+        for pos in single_route:
+            self.netPinSet.add(str(pos))
 
-        self.add_route_occupied()
+        self.netPinRoute.append(self.route)
+
+        if self.twoPinNet_i >= self.twoPinNetNums[self.multiPinNet_i] - 1:
+            if self.episode > 0:
+                if self.cost > self.route_cost[self.multiPinNet_i]:
+                    self.netPinRoute = self.old_netPinRoute
+                    self.cost = self.route_cost[self.multiPinNet_i]
+                self.route_combo[self.multiPinNet_i] = self.netPinRoute
+                self.route_cost[self.multiPinNet_i] = self.cost
+            else:
+                self.route_combo.append(self.netPinRoute)
+                self.route_cost.append(self.cost)
+
+            for pos in self.netlist[self.multiPinNet_i]:
+                x_pos = pos[0]
+                y_pos = pos[1]
+                z_pos = pos[2]
+                self.add_pin_effect(x_pos, y_pos, z_pos)
+
+            for route in self.netPinRoute:
+                self.add_occupied_coord(route)
+
+        self.twoPinNet_i += 1
+
+        # if self.episode > 0:
+        #     if self.cost > self.route_cost[self.twoPinNet_i - 1]:
+        #         self.route = self.old_route
+        #         self.cost = self.route_cost[self.twoPinNet_i - 1]
+        #     self.route_combo[self.twoPinNet_i - 1] = self.route
+        #     self.route_cost[self.twoPinNet_i - 1] = self.cost
+        # else:
+        #     self.route_combo.append(self.route)
+        #     self.route_cost.append(self.cost)
+        #
+        # self.add_occupied_coord()
+
+    def update_v1(self, single_route, single_cost):
+        self.set_route(single_route)
+        self.cost += single_cost
+
+        for pos in single_route:
+            self.netPinSet.add(str(pos))
+
+        self.netPinRoute.append(self.route)
+
+        if self.twoPinNet_i >= self.twoPinNetNums[self.multiPinNet_i] - 1:
+            if self.episode > 0:
+                if self.cost > self.route_cost[self.multiPinNet_i]:
+                    self.netPinRoute = self.old_netPinRoute
+                    self.cost = self.route_cost[self.multiPinNet_i]
+                self.route_combo[self.multiPinNet_i] = self.netPinRoute
+                self.route_cost[self.multiPinNet_i] = self.cost
+            else:
+                self.route_combo.append(self.netPinRoute)
+                self.route_cost.append(self.cost)
+
+            for pos in self.netlist[self.multiPinNet_i]:
+                x_pos = pos[0]
+                y_pos = pos[1]
+                z_pos = pos[2]
+                self.add_pin_effect_v1(x_pos, y_pos, z_pos)
+
+            for route in self.netPinRoute:
+                self.add_route_occupied(route)
+
+        self.twoPinNet_i += 1
+
+        # if self.episode > 0:
+        #     if self.cost > self.route_cost[self.twoPinNet_i - 1]:
+        #         self.route = self.old_route
+        #         self.cost = self.route_cost[self.twoPinNet_i - 1]
+        #     self.route_combo[self.twoPinNet_i - 1] = self.route
+        #     self.route_cost[self.twoPinNet_i - 1] = self.cost
+        # else:
+        #     self.route_combo.append(self.route)
+        #     self.route_cost.append(self.cost)
+        #
+        # self.add_route_occupied()
 
         # x_init = self.init_pos[0]
         # y_init = self.init_pos[1]
@@ -885,144 +767,108 @@ class GridEnv:
 
     def breakup(self):
         # breakup the routing
-        if self.episode > 0:
-            self.old_route = self.route_combo[self.twoPinNet_i - 1]
-            self.route_combo[self.twoPinNet_i - 1] = []
-            self.del_occupied_coord()
+        if self.episode > 0 and self.twoPinNet_i == 0:
+            self.old_netPinRoute = self.route_combo[self.multiPinNet_i]
+            self.route_combo[self.multiPinNet_i] = []
+            for old_route in self.old_netPinRoute:
+                self.del_occupied_coord(old_route)
 
     def breakup_v1(self):
         # breakup the routing
-        if self.episode > 0:
-            self.old_route = self.route_combo[self.twoPinNet_i - 1]
-            self.route_combo[self.twoPinNet_i - 1] = []
-            self.del_route_occupied()
+        if self.episode > 0 and self.twoPinNet_i == 0:
+            self.old_netPinRoute = self.route_combo[self.multiPinNet_i]
+            self.route_combo[self.multiPinNet_i] = []
+            for old_route in self.old_netPinRoute:
+                self.del_route_occupied(old_route)
 
     def reset(self):
         self.route = []
-        self.cost = 1000  # Large Enough
 
-        if self.twoPinNet_i >= len(self.twoPinNetCombo):
+        # initialize state of gridEnv by the two pin net(self.twoPinNet_i)
+        if self.twoPinNet_i >= self.twoPinNetNums[self.multiPinNet_i]:
+            self.cost = 0
+            self.netPinSet = set([])
+            self.netPinRoute = []
+            self.twoPinNet_i = 0
+            self.multiPinNet_i += 1
+
+        if self.multiPinNet_i >= len(self.twoPinNetCombo):
             # all the two pin nets are routed
             self.episode_cost.append(sum(self.route_cost))
             self.episode += 1
-            self.twoPinNet_i = 0
+            self.multiPinNet_i = 0
 
-        # initialize state of gridEnv by the two pin net(self.twoPinNet_i)
-        self.init_pos = self.twoPinNetCombo[self.twoPinNet_i][0]
-        self.goal_pos = self.twoPinNetCombo[self.twoPinNet_i][1]
+        self.init_pos = self.twoPinNetCombo[self.multiPinNet_i][self.twoPinNet_i][0]
+        self.goal_pos = self.twoPinNetCombo[self.multiPinNet_i][self.twoPinNet_i][1]
 
-        if self.episode == 0:
-            x_init = self.init_pos[0]
-            y_init = self.init_pos[1]
-            z_init = self.init_pos[2]
-
-            x_min = x_init - self.d_line
-            x_max = x_init + self.d_line + 1
-            y_min = y_init - self.d_line
-            y_max = y_init + self.d_line + 1
-            if x_min < 0:
-                x_min = 0
-            if x_max > self.grid_size[0]:
-                x_max = self.grid_size[0]
-            if y_min < 0:
-                y_min = 0
-            if y_max > self.grid_size[1]:
-                y_max = self.grid_size[1]
-            # Del the cost of the specified pin
-            for x_i in range(x_max - x_min):
-                for y_i in range(y_max - y_min):
-                    hide_pos = [x_min + x_i, y_min + y_i, z_init]
-                    self.occupied_coord[str(hide_pos)] -= 1000
-                    if self.occupied_coord[str(hide_pos)] <= 0:
-                        del self.occupied_coord[str(hide_pos)]
-
-            x_goal = self.goal_pos[0]
-            y_goal = self.goal_pos[1]
-            z_goal = self.goal_pos[2]
-
-            x_min = x_goal - self.d_line
-            x_max = x_goal + self.d_line + 1
-            y_min = y_goal - self.d_line
-            y_max = y_goal + self.d_line + 1
-            if x_min < 0:
-                x_min = 0
-            if x_max > self.grid_size[0]:
-                x_max = self.grid_size[0]
-            if y_min < 0:
-                y_min = 0
-            if y_max > self.grid_size[1]:
-                y_max = self.grid_size[1]
-            # Del the cost of the specified pin
-            for x_i in range(x_max - x_min):
-                for y_i in range(y_max - y_min):
-                    hide_pos = [x_min + x_i, y_min + y_i, z_goal]
-                    self.occupied_coord[str(hide_pos)] -= 1000
-                    if self.occupied_coord[str(hide_pos)] <= 0:
-                        del self.occupied_coord[str(hide_pos)]
-
-        self.twoPinNet_i += 1
+        if self.twoPinNet_i == 0:
+            for pos in self.netlist[self.multiPinNet_i]:
+                x_pos = pos[0]
+                y_pos = pos[1]
+                z_pos = pos[2]
+                self.eliminate_pin_effect(x_pos, y_pos, z_pos)
 
     def reset_v1(self):
         self.route = []
-        self.cost = 1000  # Large Enough
 
-        if self.twoPinNet_i >= len(self.twoPinNetCombo):
+        # initialize state of gridEnv by the two pin net(self.twoPinNet_i)
+        if self.twoPinNet_i >= self.twoPinNetNums[self.multiPinNet_i]:
+            self.cost = 0
+            self.netPinSet = set([])
+            self.netPinRoute = []
+            self.twoPinNet_i = 0
+            self.multiPinNet_i += 1
+
+        if self.multiPinNet_i >= len(self.twoPinNetCombo):
             # all the two pin nets are routed
             self.episode_cost.append(sum(self.route_cost))
             self.episode += 1
-            self.twoPinNet_i = 0
+            self.multiPinNet_i = 0
+        # print("[{}][{}]".format(self.multiPinNet_i, self.twoPinNet_i))
+        self.init_pos = self.twoPinNetCombo[self.multiPinNet_i][self.twoPinNet_i][0]
+        self.goal_pos = self.twoPinNetCombo[self.multiPinNet_i][self.twoPinNet_i][1]
 
-        # initialize state of gridEnv by the two pin net(self.twoPinNet_i)
-        self.init_pos = self.twoPinNetCombo[self.twoPinNet_i][0]
-        self.goal_pos = self.twoPinNetCombo[self.twoPinNet_i][1]
-
-        if self.episode == 0:
-            x_init = self.init_pos[0]
-            y_init = self.init_pos[1]
-            z_init = self.init_pos[2]
-            self.eliminate_pin_effect(x_init, y_init, z_init)
-
-            x_goal = self.goal_pos[0]
-            y_goal = self.goal_pos[1]
-            z_goal = self.goal_pos[2]
-            self.eliminate_pin_effect(x_goal, y_goal, z_goal)
-
-        self.twoPinNet_i += 1
+        if self.twoPinNet_i == 0:
+            for pos in self.netlist[self.multiPinNet_i]:
+                x_pos = pos[0]
+                y_pos = pos[1]
+                z_pos = pos[2]
+                self.eliminate_pin_effect_v1(x_pos, y_pos, z_pos)
 
 
-def a_star_solver_sim(start_pos, end_pos, i):
-    result1_table = [([[1, 2, 0], [2, 3, 0], [2, 4, 0]], 2),
-                     ([[2, 2, 0], [3, 3, 0], [2, 3, 0], [3, 4, 0]], 3),
-                     ([[3, 2, 0], [4, 3, 0], [4, 4, 0]], 2),
-                     ([[4, 2, 0], [5, 3, 0], [5, 4, 0]], 2),
-                     ([[5, 2, 0], [6, 3, 0], [6, 4, 0]], 2)]
-    result2_table = [([[1, 2, 0], [1, 3, 0], [2, 4, 0]], 2),
-                     ([[2, 2, 0], [3, 3, 0], [3, 4, 0]], 2),
-                     ([[3, 2, 0], [4, 3, 0], [4, 4, 0]], 2),
-                     ([[4, 2, 0], [5, 3, 0], [5, 4, 0]], 2),
-                     ([[5, 2, 0], [6, 3, 0], [6, 4, 0]], 2)]
-    if i < 5:
-        result = result1_table[i]
-    else:
-        result = result2_table[i-5]
-    return result
+# def a_star_solver_sim(start_pos, end_pos, i):
+#     result1_table = [([[1, 2, 0], [2, 3, 0], [2, 4, 0]], 2),
+#                      ([[2, 2, 0], [3, 3, 0], [2, 3, 0], [3, 4, 0]], 3),
+#                      ([[3, 2, 0], [4, 3, 0], [4, 4, 0]], 2),
+#                      ([[4, 2, 0], [5, 3, 0], [5, 4, 0]], 2),
+#                      ([[5, 2, 0], [6, 3, 0], [6, 4, 0]], 2)]
+#     result2_table = [([[1, 2, 0], [1, 3, 0], [2, 4, 0]], 2),
+#                      ([[2, 2, 0], [3, 3, 0], [3, 4, 0]], 2),
+#                      ([[3, 2, 0], [4, 3, 0], [4, 4, 0]], 2),
+#                      ([[4, 2, 0], [5, 3, 0], [5, 4, 0]], 2),
+#                      ([[5, 2, 0], [6, 3, 0], [6, 4, 0]], 2)]
+#     if i < 5:
+#         result = result1_table[i]
+#     else:
+#         result = result2_table[i-5]
+#     return result
 
 
-if __name__ == '__main__':
-    benchmark_dir = 'benchmark'
-    for benchmark_file in os.listdir(benchmark_dir):
-        benchmark_file = benchmark_dir + '/' + benchmark_file
-        gridParameters = grid_parameters(benchmark_file)
-        gridEnv = GridEnv(gridParameters)
-        k = 0
-        while gridEnv.episode < 10:
-            gridEnv.reset()
-            if gridEnv.episode == 10:
-                break
-            gridEnv.breakup()
-            route, cost = a_star_solver_sim(gridEnv.init_pos, gridEnv.goal_pos, k)
-            gridEnv.route = route
-            gridEnv.cost = cost
-            gridEnv.update()
-            k += 1
-        print(gridEnv)
+# if __name__ == '__main__':
+#     benchmark_dir = 'benchmark'
+#     for benchmark_file in os.listdir(benchmark_dir):
+#         benchmark_file = benchmark_dir + '/' + benchmark_file
+#         gridParameters = grid_parameters(benchmark_file)
+#         gridEnv = GridEnv(gridParameters)
+#         k = 0
+#         while gridEnv.episode < 10:
+#             gridEnv.reset()
+#             if gridEnv.episode == 10:
+#                 break
+#             gridEnv.breakup()
+#             route, cost = a_star_solver_sim(gridEnv.init_pos, gridEnv.goal_pos, k)
+#             gridEnv.route = route
+#             gridEnv.cost = cost
+#             gridEnv.update()
+#             k += 1
+#         print(gridEnv)

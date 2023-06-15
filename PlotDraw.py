@@ -64,7 +64,11 @@ def draw_origin_grid_plot(grid_parameter, benchmark_i=0):
 
 
 def draw_grid_plot(grid_env, benchmark_i=0):
-    best_route = grid_env.route_combo
+    best_route = []
+    for i in range(len(grid_env.route_combo)):
+        for j in range(len(grid_env.route_combo[i])):
+            best_route.append(grid_env.route_combo[i][j])
+    # best_route = grid_env.route_combo
     grid_parameter = grid_env.grid_parameter
     grid_size = grid_parameter['gridSize']
     layer_num = grid_size[2]
