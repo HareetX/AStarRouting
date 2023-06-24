@@ -35,7 +35,8 @@ class CustomizeFrame(wx.Frame):
         filename = self.tc1.GetValue()
         if os.path.isfile(filename):
             gp = grid_parameters(filename)
-            draw_origin_grid_plot(gp)
+            env = GridEnv(gp)
+            draw_origin_grid_plot(env)
         else:
             er_msg = wx.MessageDialog(None, "文件路径不存在", "错误信息提示", wx.YES_DEFAULT | wx.ICON_ERROR)
             if er_msg.ShowModal() == wx.ID_YES:  # 如果点击了提示框的确定按钮
@@ -54,11 +55,11 @@ class CustomizeFrame(wx.Frame):
                     break
                 gridEnv.breakup()
                 route, cost = AStarSolver.a_star_route(gridEnv.init_pos, gridEnv.goal_pos,
-                                                       gridEnv.occupied_coord, gp['gridSize'])
+                                                       gridEnv.occupied_coord, gridEnv.netPinSet, gp['gridSize'])
                 # gridEnv.route = route
-                gridEnv.set_route(route)
-                gridEnv.cost = cost
-                gridEnv.update()
+                # gridEnv.set_route(route)
+                # gridEnv.cost = cost
+                gridEnv.update(route, cost)
         else:
             er_msg = wx.MessageDialog(None, "文件路径不存在", "错误信息提示", wx.YES_DEFAULT | wx.ICON_ERROR)
             if er_msg.ShowModal() == wx.ID_YES:  # 如果点击了提示框的确定按钮
@@ -112,7 +113,8 @@ class RandomFrame(wx.Frame):
             max_pin_num = int(self.tc5.GetValue())
         generator(filename, [grid_x, grid_y], grid_z, net_num, max_pin_num)
         gp = grid_parameters(filename)
-        draw_origin_grid_plot(gp)
+        env = GridEnv(gp)
+        draw_origin_grid_plot(env)
 
     def OnButtonClick2(self, event):
         filename = 'random_benchmark.gr'
@@ -127,11 +129,11 @@ class RandomFrame(wx.Frame):
                     break
                 gridEnv.breakup()
                 route, cost = AStarSolver.a_star_route(gridEnv.init_pos, gridEnv.goal_pos,
-                                                       gridEnv.occupied_coord, gp['gridSize'])
+                                                       gridEnv.occupied_coord, gridEnv.netPinSet, gp['gridSize'])
                 # gridEnv.route = route
-                gridEnv.set_route(route)
-                gridEnv.cost = cost
-                gridEnv.update()
+                # gridEnv.set_route(route)
+                # gridEnv.cost = cost
+                gridEnv.update(route, cost)
         else:
             er_msg = wx.MessageDialog(None, "布线问题不存在", "错误信息提示", wx.YES_DEFAULT | wx.ICON_ERROR)
             if er_msg.ShowModal() == wx.ID_YES:  # 如果点击了提示框的确定按钮

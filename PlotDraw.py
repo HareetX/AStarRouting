@@ -10,7 +10,7 @@ matplotlib.use('TkAgg')
 result_dir = 'result_plot'
 
 
-def draw_cost_plot(cost_list, benchmark_i):
+def draw_cost_plot(cost_list, benchmark_i=0):
     n = np.linspace(1, len(cost_list), len(cost_list))
     plt.figure()
     plt.plot(n, cost_list)
@@ -25,17 +25,22 @@ def draw_cost_plot(cost_list, benchmark_i):
     plt.close()
 
 
-def draw_origin_grid_plot(grid_parameter, benchmark_i=0):
-    grid_size = grid_parameter['gridSize']
+def draw_origin_grid_plot(grid_env, benchmark_i=0):
+    grid_size = grid_env.grid_size
+    # grid_size = grid_parameter['gridSize']
     layer_num = grid_size[2]
     pins = []
 
-    for i in range(grid_parameter['numNet']):
-        net_info = grid_parameter['netInfo'][i]
-        for j in range(net_info['numPins']):
-            pins.append(net_info[str(j + 1)])
+    for net in grid_env.netlist:
+        for pos in net:
+            pins.append(pos)
 
-    plt.figure(figsize=(13, 6))
+    # for i in range(grid_parameter['numNet']):
+    #     net_info = grid_parameter['netInfo'][i]
+    #     for j in range(net_info['numPins']):
+    #         pins.append(net_info[str(j + 1)])
+
+    plt.figure(figsize=(6*(grid_size[0]/grid_size[1]) * layer_num + layer_num - 1, 6))
     for layer in range(layer_num):
         plt.subplot(1, layer_num, layer + 1)
         o_i = 0
@@ -69,13 +74,14 @@ def draw_grid_plot(grid_env, benchmark_i=0):
         for j in range(len(grid_env.route_combo[i])):
             best_route.append(grid_env.route_combo[i][j])
     # best_route = grid_env.route_combo
-    grid_parameter = grid_env.grid_parameter
-    grid_size = grid_parameter['gridSize']
+    # grid_parameter = grid_env.grid_parameter
+    # grid_size = grid_parameter['gridSize']
+    grid_size = grid_env.grid_size
     layer_num = grid_size[2]
     start = []
     end = []
 
-    plt.figure(figsize=(6*layer_num + layer_num - 1, 6))
+    plt.figure(figsize=(6*(grid_size[0]/grid_size[1]) * layer_num + layer_num - 1, 6))
     for layer in range(layer_num):
         plt.subplot(1, layer_num, layer + 1)
         o_i = 0

@@ -34,7 +34,7 @@ def generator(benchmark_name, grid_size, layer_num, net_num, max_pin_num):
 def parse_arguments():
     parser = argparse.ArgumentParser('Benchmark Generator Parser')
     parser.add_argument('--benchNumber', type=int, dest='benchmarkNumber', default=5)
-    parser.add_argument('--gridSize', type=int, dest='gridSize', default=64)
+    parser.add_argument('--gridSize', type=int, dest='gridSize', default=512)
     parser.add_argument('--layerNum', type=int, dest='layerNum', default=2)
     parser.add_argument('--netNum', type=int, dest='netNum', default=10)
     parser.add_argument('--maxPinNum', type=int, dest='maxPinNum', default=4)

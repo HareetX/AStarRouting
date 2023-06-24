@@ -1,0 +1,38 @@
+@startuml
+
+class GridParameters {
+    string filename
+    list<float> dia_pos0
+    list<float> dia_pos1
+
+    list<int> gridSize
+    dict layer
+    list<Pad> pad_obstacles
+    dict netClassList
+    int netNum
+    list<Net> netList
+
+    list to_real_coord(grid_coord)
+    void store_route(merge_route_combo)
+}
+
+class Net {
+    int netID
+    string netName
+    string netClass
+    list<Pad> padList
+}
+
+class Pad {
+    list<int> position
+    string layer
+    list<int> size
+    string type
+    int netID
+}
+
+Net "1" o-left- "n" Pad
+GridParameters "1" o-down- "m" Net
+GridParameters "1" o-down- "p" Pad
+
+@enduml
