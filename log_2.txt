@@ -1,0 +1,14 @@
+bench1/bm2.unrouted.kicad_pcb time = 13.788845777511597 s
+	cost = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 236.4619999999998, 237.6739999999993, 767.7079999999997, 171.146, 99.20400000000002, 190.3819999999997, 530.5799999999999, 203.2379999999998, 232.03999999999988, 64.48200000000001, 41.482, 0, 0, 77.96200000000002, 117.342, 19.656, 106.95200000000003]
+
+bench1/bm2.unrouted.kicad_pcb
+bench1/bm2.unrouted.kicad_pcb time = 13.788845777511597 s
+bench1/bm2.unrouted.kicad_pcb route time = 13.257676362991333 s
+	get neighbors time = 0.7208757400512695 s
+	get neighbors number = 48692
+	add neighbors time = 11.384869813919067 s
+bench1/bm2.unrouted.kicad_pcb modify time = 0.10194778442382812 s
+
+bench1/bm2.unrouted.kicad_pcb route length = 2571.829999999999
+bench1/bm2.unrouted.kicad_pcb via amount = 20
+

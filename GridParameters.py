@@ -35,8 +35,9 @@ def to_grid_coord(coord_i):
 
 
 class GridParameters:
-    def __init__(self, kicad_pcb, kicad_pro):
+    def __init__(self, kicad_pcb, kicad_pro, save_kicad_pcb):
         self.filename = kicad_pcb
+        self.save_filename = save_kicad_pcb
         board = Board().from_file(kicad_pcb)
 
         project = KiCadPro().from_file(kicad_pro)
@@ -164,4 +165,4 @@ class GridParameters:
                     board.traceItems.append(item)
                 item_id += 1
             i += 1
-        board.to_file()
+        board.to_file(self.save_filename)

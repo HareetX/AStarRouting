@@ -357,8 +357,13 @@ def a_star_route(start, end, end_set, occupied_msg, net_pin_set, grid_size):
     # closed_set = []
     closed_set = set([])
 
-    start_item = Item(start, end, 0.0, 0.0, None)
-    heapq.heappush(open_set, start_item)
+    for pos in start:
+        start_pos = list(int(char) for char in pos.strip('[]').split(', '))
+        start_item = Item(start_pos, end, 0.0, 0.0, None)
+        heapq.heappush(open_set, start_item)
+        open_set_graph[start_pos[0]][start_pos[1]][start_pos[2]] = start_item
+    # start_item = Item(start, end, 0.0, 0.0, None)
+    # heapq.heappush(open_set, start_item)
 
     while open_set:
         cur_item = heapq.heappop(open_set)
@@ -461,8 +466,13 @@ def a_star_route_v1(start, end, end_set, grid_graph, net_pin_set, grid_size):
     # closed_set = []
     closed_set = set([])
 
-    start_item = Item(start, end, 0.0, 0.0, None)
-    heapq.heappush(open_set, start_item)
+    for pos in start:
+        start_pos = list(int(char) for char in pos.strip('[]').split(', '))
+        start_item = Item(start_pos, end, 0.0, 0.0, None)
+        heapq.heappush(open_set, start_item)
+        open_set_graph[start_pos[0]][start_pos[1]][start_pos[2]] = start_item
+    # start_item = Item(start, end, 0.0, 0.0, None)
+    # heapq.heappush(open_set, start_item)
 
     while open_set:
         cur_item = heapq.heappop(open_set)
@@ -564,6 +574,7 @@ def solver_arguments():
     parser.add_argument('--trace', type=bool, dest='trace', default=True)
     parser.add_argument('--kicad_pcb', type=str, dest='kicad_pcb', default="bench1/bm2.unrouted.kicad_pcb")
     parser.add_argument('--kicad_pro', type=str, dest='kicad_pro', default="bench1/bm2.unrouted.kicad_pro")
+    parser.add_argument('--save_file', type=str, dest='save_file', default="bench1/bm2.routed.kicad_pcb")
 
     return parser.parse_args()
 
@@ -580,7 +591,8 @@ if __name__ == '__main__':
     #     benchmark_file = benchmark_dir + '/' + benchmark_file
     benchmark_file = arg.kicad_pcb
     project_file = arg.kicad_pro
-    gridParameters = grid_parameters(benchmark_file, project_file)
+    save_file = arg.save_file
+    gridParameters = grid_parameters(benchmark_file, project_file, save_file)
     gridEnv = GridEnv(gridParameters, arg.type)
 
     # if arg.trace:
@@ -602,7 +614,7 @@ if __name__ == '__main__':
             PlotDraw.draw_origin_grid_plot(gridEnv)
             PlotDraw.draw_grid_plot(gridEnv)
 
-            gridParameters.store_route(gridEnv.merge_route())
+            # gridParameters.store_route(gridEnv.merge_route())
 
         if gridEnv.episode == arg.episode:
             break

@@ -159,6 +159,25 @@ class GridEnv:
                 #     two_pin_nets.append(two_pin_set[j][0])
                 # if len(two_pin_nets) >= netlist_len - 1:
                 #     break
+            if len(two_pin_nets) > 0:
+                p = 1
+                q = p
+                connected_nodes = {str(two_pin_nets[0][0]), str(two_pin_nets[0][1])}
+                while p < len(two_pin_nets):
+                    if str(two_pin_nets[q][0]) in connected_nodes:
+                        connected_nodes.add(str(two_pin_nets[q][1]))
+                        two_pin_nets[p], two_pin_nets[q] = two_pin_nets[q], two_pin_nets[p]
+                        p += 1
+                        q = p
+                    elif str(two_pin_nets[q][1]) in connected_nodes:
+                        connected_nodes.add(str(two_pin_nets[q][0]))
+                        two_pin_nets[q][0], two_pin_nets[q][1] = two_pin_nets[q][1], two_pin_nets[q][0]
+                        two_pin_nets[p], two_pin_nets[q] = two_pin_nets[q], two_pin_nets[p]
+                        p += 1
+                        q = p
+                    else:
+                        q += 1
+
             two_pin_nets_combo.append(two_pin_nets)
             two_pin_nets = []
             two_pin_set = []
@@ -1157,7 +1176,9 @@ class GridEnv:
             return
 
         print("[{}][{}]".format(self.multiPinNet_i, self.twoPinNet_i))
-        self.init_pos = self.twoPinNetCombo[self.multiPinNet_i][self.twoPinNet_i][0]
+        init_pos = self.twoPinNetCombo[self.multiPinNet_i][self.twoPinNet_i][0]
+        # self.init_pos = self.twoPinNetCombo[self.multiPinNet_i][self.twoPinNet_i][0]
+        self.init_pos = self.pin_grid_set[str(init_pos)]
         self.goal_pos = self.twoPinNetCombo[self.multiPinNet_i][self.twoPinNet_i][1]
 
         if self.twoPinNet_i == 0:
@@ -1208,7 +1229,9 @@ class GridEnv:
             return
 
         print("[{}][{}]".format(self.multiPinNet_i, self.twoPinNet_i))
-        self.init_pos = self.twoPinNetCombo[self.multiPinNet_i][self.twoPinNet_i][0]
+        init_pos = self.twoPinNetCombo[self.multiPinNet_i][self.twoPinNet_i][0]
+        # self.init_pos = self.twoPinNetCombo[self.multiPinNet_i][self.twoPinNet_i][0]
+        self.init_pos = self.pin_grid_set[str(init_pos)]
         self.goal_pos = self.twoPinNetCombo[self.multiPinNet_i][self.twoPinNet_i][1]
 
         if self.twoPinNet_i == 0:
