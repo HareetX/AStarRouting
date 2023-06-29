@@ -11,7 +11,7 @@ import PlotDraw
 from GridEnvironment import GridEnv
 from KicadParser import grid_parameters
 # from ProblemParser import grid_parameters
-from utils import diagonal_distance
+from utils import diagonal_distance, circle_space, rect_space
 from RouteEvaluation import route_length, via_amount, min_via_amount
 
 
@@ -55,7 +55,7 @@ class Item:
         self.g_score = g_score_with_cost
         self.f_score = self.g_score + self.h_score
 
-    def get_neighbors(self, occupied_msg, net_pin_set, grid_size):
+    def get_neighbors(self, occupied_msg, net_pin_set, grid_size):  # , electrical_width
         x, y, z = self.cur_pos
         direct = None
         if self.parent is not None:
@@ -70,7 +70,9 @@ class Item:
                 g_cost = 0.1  # bend cost
             if str(pos) in net_pin_set:
                 g_cost = -1
+            # elif pos != self.end_pos:
             elif pos != self.end_pos and str(pos) in occupied_msg:
+                # g_cost += calculate_space(pos, electrical_width[0], occupied_msg)  # TODO
                 g_cost += occupied_msg[str(pos)]
             item = Item(pos, self.end_pos, self.g_score, g_cost + 1, self)
             neighbors.append(item)
@@ -82,7 +84,9 @@ class Item:
                 g_cost = 0.1  # bend cost
             if str(pos) in net_pin_set:
                 g_cost = -1.414
+            # elif pos != self.end_pos:
             elif pos != self.end_pos and str(pos) in occupied_msg:
+                # g_cost += calculate_space(pos, electrical_width[0], occupied_msg)  # TODO
                 g_cost += occupied_msg[str(pos)]
             item = Item(pos, self.end_pos, self.g_score, g_cost + 1.414, self)
             neighbors.append(item)
@@ -94,7 +98,9 @@ class Item:
                 g_cost = 0.1  # bend cost
             if str(pos) in net_pin_set:
                 g_cost = -1
+            # elif pos != self.end_pos:
             elif pos != self.end_pos and str(pos) in occupied_msg:
+                # g_cost += calculate_space(pos, electrical_width[0], occupied_msg)  # TODO
                 g_cost += occupied_msg[str(pos)]
             item = Item(pos, self.end_pos, self.g_score, g_cost + 1, self)
             neighbors.append(item)
@@ -106,7 +112,9 @@ class Item:
                 g_cost = 0.1  # bend cost
             if str(pos) in net_pin_set:
                 g_cost = -1.414
+            # elif pos != self.end_pos:
             elif pos != self.end_pos and str(pos) in occupied_msg:
+                # g_cost += calculate_space(pos, electrical_width[0], occupied_msg)  # TODO
                 g_cost += occupied_msg[str(pos)]
             item = Item(pos, self.end_pos, self.g_score, g_cost + 1.414, self)
             neighbors.append(item)
@@ -118,7 +126,9 @@ class Item:
                 g_cost = 0.1  # bend cost
             if str(pos) in net_pin_set:
                 g_cost = -1
+            # elif pos != self.end_pos:
             elif pos != self.end_pos and str(pos) in occupied_msg:
+                # g_cost += calculate_space(pos, electrical_width[0], occupied_msg)  # TODO
                 g_cost += occupied_msg[str(pos)]
             item = Item(pos, self.end_pos, self.g_score, g_cost + 1, self)
             neighbors.append(item)
@@ -130,7 +140,9 @@ class Item:
                 g_cost = 0.1  # bend cost
             if str(pos) in net_pin_set:
                 g_cost = -1.414
+            # elif pos != self.end_pos:
             elif pos != self.end_pos and str(pos) in occupied_msg:
+                # g_cost += calculate_space(pos, electrical_width[0], occupied_msg)  # TODO
                 g_cost += occupied_msg[str(pos)]
             item = Item(pos, self.end_pos, self.g_score, g_cost + 1.414, self)
             neighbors.append(item)
@@ -142,7 +154,9 @@ class Item:
                 g_cost = 0.1  # bend cost
             if str(pos) in net_pin_set:
                 g_cost = -1
+            # elif pos != self.end_pos:
             elif pos != self.end_pos and str(pos) in occupied_msg:
+                # g_cost += calculate_space(pos, electrical_width[0], occupied_msg)  # TODO
                 g_cost += occupied_msg[str(pos)]
             item = Item(pos, self.end_pos, self.g_score, g_cost + 1, self)
             neighbors.append(item)
@@ -154,7 +168,9 @@ class Item:
                 g_cost = 0.1  # bend cost
             if str(pos) in net_pin_set:
                 g_cost = -1.414
+            # elif pos != self.end_pos:
             elif pos != self.end_pos and str(pos) in occupied_msg:
+                # g_cost += calculate_space(pos, electrical_width[0], occupied_msg)  # TODO
                 g_cost += occupied_msg[str(pos)]
             item = Item(pos, self.end_pos, self.g_score, g_cost + 1.414, self)
             neighbors.append(item)
@@ -165,7 +181,10 @@ class Item:
             g_cost = 9  # go through a via need a high cost
             if str(pos) in net_pin_set:
                 g_cost = -1
+            # elif pos != self.end_pos:
             elif pos != self.end_pos and str(pos) in occupied_msg:
+                # g_cost += calculate_space(pos, electrical_width[1], occupied_msg)  # TODO
+                # g_cost += calculate_space(self.cur_pos, electrical_width[1], occupied_msg)
                 g_cost = occupied_msg[str(pos)]
             item = Item(pos, self.end_pos, self.g_score, g_cost + 1, self)
             neighbors.append(item)
@@ -175,7 +194,10 @@ class Item:
             g_cost = 9  # go through a via need a high cost
             if str(pos) in net_pin_set:
                 g_cost = -1
+            # elif pos != self.end_pos:
             elif pos != self.end_pos and str(pos) in occupied_msg:
+                # g_cost += calculate_space(pos, electrical_width[1], occupied_msg)  # TODO
+                # g_cost += calculate_space(self.cur_pos, electrical_width[1], occupied_msg)
                 g_cost = occupied_msg[str(pos)]
             item = Item(pos, self.end_pos, self.g_score, g_cost + 1, self)
             neighbors.append(item)
@@ -342,13 +364,22 @@ def generate_path(end_item):
     return path, g_cost
 
 
+def calculate_space(pos, radius, occupied_msg):
+    cached_trace_cost = 0
+    pos_list = rect_space(pos, radius)
+    for coord in pos_list:
+        if str(coord) in occupied_msg:
+            cached_trace_cost += occupied_msg[str(coord)]
+    return cached_trace_cost
+
+
 global get_neighbors_time
 global add_neighbors_time
 
 global get_neighbors_num
 
 
-def a_star_route(start, end, end_set, occupied_msg, net_pin_set, grid_size):
+def a_star_route(start, end, end_set, occupied_msg, net_pin_set, grid_size):  # , electrical_width
     # arg = solver_arguments()
     # if arg.trace:
     global get_neighbors_time, add_neighbors_time, get_neighbors_num
@@ -365,8 +396,15 @@ def a_star_route(start, end, end_set, occupied_msg, net_pin_set, grid_size):
     # start_item = Item(start, end, 0.0, 0.0, None)
     # heapq.heappush(open_set, start_item)
 
+    # For Debug
+    debug_log = open('debug.txt', 'w', encoding="utf-8")
     while open_set:
         cur_item = heapq.heappop(open_set)
+        # For Debug
+        if cur_item.cur_pos == [252, 270, 1]:
+            print('breakpoint')
+        print("cur_pos = {}".format(cur_item.cur_pos), file=debug_log)
+        print("route = {}".format(generate_path(cur_item)), file=debug_log)
         if str(cur_item.cur_pos) in end_set:
             return generate_path(cur_item)
         else:
@@ -375,12 +413,12 @@ def a_star_route(start, end, end_set, occupied_msg, net_pin_set, grid_size):
 
             if arg.trace:
                 get_neighbors_time_start = time.time()
-                neighbor_list = cur_item.get_neighbors(occupied_msg, net_pin_set, grid_size)
+                neighbor_list = cur_item.get_neighbors(occupied_msg, net_pin_set, grid_size)  # , electrical_width
                 get_neighbors_time_end = time.time()
                 get_neighbors_time += get_neighbors_time_end - get_neighbors_time_start
                 get_neighbors_num += 1
             else:
-                neighbor_list = cur_item.get_neighbors(occupied_msg, net_pin_set, grid_size)
+                neighbor_list = cur_item.get_neighbors(occupied_msg, net_pin_set, grid_size)  # , electrical_width
 
             if arg.trace:
                 add_neighbors_time_start = time.time()
@@ -572,9 +610,9 @@ def solver_arguments():
     parser.add_argument('--episode', type=int, dest='episode', default=1)
     parser.add_argument('--log', type=str, dest='log', default="log.txt")
     parser.add_argument('--trace', type=bool, dest='trace', default=True)
-    parser.add_argument('--kicad_pcb', type=str, dest='kicad_pcb', default="bench1/bm2.unrouted.kicad_pcb")
-    parser.add_argument('--kicad_pro', type=str, dest='kicad_pro', default="bench1/bm2.unrouted.kicad_pro")
-    parser.add_argument('--save_file', type=str, dest='save_file', default="bench1/bm2.routed.kicad_pcb")
+    parser.add_argument('--kicad_pcb', type=str, dest='kicad_pcb', default="bench4/bm4.unrouted.kicad_pcb")
+    parser.add_argument('--kicad_pro', type=str, dest='kicad_pro', default="bench4/bm4.unrouted.kicad_pro")
+    parser.add_argument('--save_file', type=str, dest='save_file', default="bench4/bm4.routed.kicad_pcb")
 
     return parser.parse_args()
 
@@ -614,7 +652,7 @@ if __name__ == '__main__':
             PlotDraw.draw_origin_grid_plot(gridEnv)
             PlotDraw.draw_grid_plot(gridEnv)
 
-            # gridParameters.store_route(gridEnv.merge_route())
+            gridParameters.store_route(gridEnv.merge_route())
 
         if gridEnv.episode == arg.episode:
             break
@@ -640,7 +678,8 @@ if __name__ == '__main__':
                 if arg.type == 0:
                     route, cost = a_star_route(gridEnv.init_pos, gridEnv.goal_pos,
                                                gridEnv.pin_grid_set[str(gridEnv.goal_pos)],
-                                               gridEnv.occupied_coord, gridEnv.netPinSet, gridEnv.grid_size)
+                                               gridEnv.occupied_coord,  # gridEnv.electric_width[gridEnv.multiPinNet_i],  # TODO
+                                               gridEnv.netPinSet, gridEnv.grid_size)
                 else:
                     route, cost = a_star_route_v1(gridEnv.init_pos, gridEnv.goal_pos,
                                                   gridEnv.pin_grid_set[str(gridEnv.goal_pos)],
@@ -651,7 +690,8 @@ if __name__ == '__main__':
                 if arg.type == 0:
                     route, cost = a_star_route(gridEnv.init_pos, gridEnv.goal_pos,
                                                gridEnv.pin_grid_set[str(gridEnv.goal_pos)],
-                                               gridEnv.occupied_coord, gridEnv.netPinSet, gridEnv.grid_size)
+                                               gridEnv.occupied_coord,  # gridEnv.electric_width[gridEnv.multiPinNet_i],  # TODO
+                                               gridEnv.netPinSet, gridEnv.grid_size)
                 else:
                     route, cost = a_star_route_v1(gridEnv.init_pos, gridEnv.goal_pos,
                                                   gridEnv.pin_grid_set[str(gridEnv.goal_pos)],
