@@ -24,14 +24,16 @@ class Net:
 
 
 class NetClass:
-    def __init__(self, track_width, microvia_diameter, microvia_drill):
+    def __init__(self, track_width, microvia_diameter, microvia_drill, clearance):
         self.track_width = to_grid_coord(track_width)
         self.microvia_diameter = to_grid_coord(microvia_diameter)
         self.microvia_drill = to_grid_coord(microvia_drill)
+        self.clearance_with_track = to_grid_coord(clearance + track_width / 2)
+        self.clearance_with_microvia = to_grid_coord(clearance + microvia_drill / 2)
 
 
 def to_grid_coord(coord_i):
-    return int(coord_i * 3 / 0.25)
+    return int(coord_i * 3 / 0.25)  # 0.25
 
 
 class GridParameters:
@@ -129,7 +131,8 @@ class GridParameters:
         for net_class in self.netClassReal:
             self.netClass[net_class] = NetClass(self.netClassReal[net_class].track_width,
                                                 self.netClassReal[net_class].microvia_diameter,
-                                                self.netClassReal[net_class].microvia_drill)
+                                                self.netClassReal[net_class].microvia_drill,
+                                                self.netClassReal[net_class].clearance)
         self.netList = net_list
 
         board.to_file()

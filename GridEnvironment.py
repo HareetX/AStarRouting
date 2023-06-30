@@ -13,8 +13,8 @@ class GridEnv:
         self.grid_size = grid_parameter.gridSize
         self.num_net = grid_parameter.netNum
 
-        # self.electric_width = []
-        self.electric_width = 3
+        self.electric_width = []  # TODO
+        # self.electric_width = 3
         self.wire_max_width = None
 
         self.pin_hsize_array = []
@@ -53,7 +53,7 @@ class GridEnv:
         width_list = []
         for i in range(self.num_net):
             net_info = self.grid_parameter.netList[i + 1]
-            if i > 3:  # For Debug
+            if i > 4:  # For Debug
                 print(net_info.netName)
                 netlist.append([])
                 continue
@@ -64,8 +64,8 @@ class GridEnv:
                 self.wire_max_width = self.grid_parameter.netClass[net_info.netClass].track_width
             width_list.append((self.grid_parameter.netClass[net_info.netClass].track_width,
                                self.grid_parameter.netClass[net_info.netClass].microvia_diameter))
-            # self.electric_width.append((self.grid_parameter.netClass[net_info.netClass].clearance_with_track,
-            #                             self.grid_parameter.netClass[net_info.netClass].clearance_with_microvia))  # TODO
+            self.electric_width.append((self.grid_parameter.netClass[net_info.netClass].clearance_with_track,  # TODO
+                                        self.grid_parameter.netClass[net_info.netClass].clearance_with_microvia))
             single_net_pins = []
             net_order.append(i)
 
@@ -79,7 +79,7 @@ class GridEnv:
         two_pin_nets_combo = []
         for i in range(self.num_net):
             netlist_len = len(netlist[i])
-            if i > 3:  # For Debug
+            if i > 4:  # For Debug
                 two_pin_net_nums.append(0)
                 continue
             two_pin_net_nums.append(netlist_len - 1)
@@ -222,8 +222,8 @@ class GridEnv:
                     size_y_min = y_coord - pin_hsize_y + 1
                     size_y_max = y_coord + pin_hsize_y
 
-                pin_hsize_x += self.electric_width + self.wire_max_width  # TODO
-                pin_hsize_y += self.electric_width + self.wire_max_width
+                # pin_hsize_x += self.electric_width + self.wire_max_width  # TODO
+                # pin_hsize_y += self.electric_width + self.wire_max_width
 
                 x_min = x_coord - pin_hsize_x
                 x_max = x_coord + pin_hsize_x + 1
@@ -276,10 +276,10 @@ class GridEnv:
             y_coord = obs_pad.position[1]
             z_coord = obs_pad.position[2]
 
-            # pin_hsize_x = int(obs_pad.size[0] / 2)
-            # pin_hsize_y = int(obs_pad.size[1] / 2)
-            pin_hsize_x = int(obs_pad.size[0] / 2) + self.electric_width + self.wire_max_width  # TODO
-            pin_hsize_y = int(obs_pad.size[1] / 2) + self.electric_width + self.wire_max_width
+            pin_hsize_x = int(obs_pad.size[0] / 2)
+            pin_hsize_y = int(obs_pad.size[1] / 2)
+            # pin_hsize_x = int(obs_pad.size[0] / 2) + self.electric_width + self.wire_max_width  # TODO
+            # pin_hsize_y = int(obs_pad.size[1] / 2) + self.electric_width + self.wire_max_width
 
             x_min = x_coord - pin_hsize_x
             x_max = x_coord + pin_hsize_x + 1
@@ -319,8 +319,8 @@ class GridEnv:
 
     def add_pin_effect(self, pin_x, pin_y, pin_z, pin_hsize):
         pin_hsize_x, pin_hsize_y, pin_type = pin_hsize
-        pin_hsize_x += self.electric_width + self.wire_max_width  # TODO
-        pin_hsize_y += self.electric_width + self.wire_max_width
+        # pin_hsize_x += self.electric_width + self.wire_max_width  # TODO
+        # pin_hsize_y += self.electric_width + self.wire_max_width
         x_min = pin_x - pin_hsize_x
         x_max = pin_x + pin_hsize_x + 1
         y_min = pin_y - pin_hsize_y
@@ -388,8 +388,8 @@ class GridEnv:
 
     def eliminate_pin_effect(self, pin_x, pin_y, pin_z, pin_hsize):
         pin_hsize_x, pin_hsize_y, pin_type = pin_hsize
-        pin_hsize_x += self.electric_width + self.wire_max_width  # TODO
-        pin_hsize_y += self.electric_width + self.wire_max_width
+        # pin_hsize_x += self.electric_width + self.wire_max_width  # TODO
+        # pin_hsize_y += self.electric_width + self.wire_max_width
         x_min = pin_x - pin_hsize_x
         x_max = pin_x + pin_hsize_x + 1
         y_min = pin_y - pin_hsize_y
@@ -576,10 +576,10 @@ class GridEnv:
                     self.route.append(origin_route[i])
 
     def add_occupied_coord(self, route, distance):
-        # d_line = distance[0]
-        # via_d = distance[1]
-        d_line = distance[0] + self.electric_width  # TODO
-        via_d = distance[1] + self.electric_width
+        d_line = distance[0]
+        via_d = distance[1]
+        # d_line = distance[0] + self.electric_width  # TODO
+        # via_d = distance[1] + self.electric_width
         for i in range(len(route) - 1):
             x_0, y_0, z_0 = route[i]
             x_1, y_1, z_1 = route[i + 1]
@@ -806,8 +806,10 @@ class GridEnv:
                     y_0 += delta_y
 
     def del_occupied_coord(self, old_route, distance):
-        d_line = distance[0] + self.electric_width
-        via_d = distance[1] + self.electric_width
+        d_line = distance[0]
+        via_d = distance[1]
+        # d_line = distance[0] + self.electric_width  # TODO
+        # via_d = distance[1] + self.electric_width
         for i in range(len(old_route) - 1):
             x_0, y_0, z_0 = old_route[i]
             x_1, y_1, z_1 = old_route[i + 1]
@@ -1189,7 +1191,7 @@ class GridEnv:
             self.goal_pos = None
             return
 
-        print("[{}][{}]".format(self.multiPinNet_i, self.twoPinNet_i))
+        print("NetCombo[{}][{}]".format(self.multiPinNet_i, self.twoPinNet_i))
         init_pos = self.twoPinNetCombo[self.multiPinNet_i][self.twoPinNet_i][0]
         # self.init_pos = self.twoPinNetCombo[self.multiPinNet_i][self.twoPinNet_i][0]
         self.init_pos = self.pin_grid_set[str(init_pos)]

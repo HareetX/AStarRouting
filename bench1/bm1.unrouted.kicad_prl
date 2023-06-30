@@ -67,11 +67,11 @@
       39,
       40
     ],
-    "visible_layers": "003bfff_80000001",
+    "visible_layers": "fffffff_ffffffff",
     "zone_display_mode": 0
   },
   "meta": {
-    "filename": "bm2.unrouted.kicad_prl",
+    "filename": "bm1.unrouted.kicad_prl",
     "version": 3
   },
   "project": {

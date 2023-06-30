@@ -49,7 +49,7 @@ class NetClass:
     """The ``via_drill`` token defines the netClass"""
 
     wire_width: str = ""
-    """The ``microvia_drill`` token defines the netClass"""
+    """The ``wire_width`` token defines the netClass"""
 
     def from_sexpr(self, exp: list):
         """Convert the given S-Expresstion into a Board object
