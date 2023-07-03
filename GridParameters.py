@@ -7,9 +7,10 @@ from kiutils_pro import KiCadPro
 
 
 class Pad:
-    def __init__(self, pos, layer, size, pad_type, net_id):
+    def __init__(self, pos, layer, shape, size, pad_type, net_id):
         self.position = pos
         self.layer = layer
+        self.shape = shape
         self.size = size
         self.type = pad_type
         self.netID = net_id
@@ -24,16 +25,23 @@ class Net:
 
 
 class NetClass:
-    def __init__(self, track_width, microvia_diameter, microvia_drill, clearance):
-        self.track_width = to_grid_coord(track_width)
-        self.microvia_diameter = to_grid_coord(microvia_diameter)
-        self.microvia_drill = to_grid_coord(microvia_drill)
-        self.clearance_with_track = to_grid_coord(clearance + track_width / 2)
-        self.clearance_with_microvia = to_grid_coord(clearance + microvia_drill / 2)
+    def __init__(self, track_width, microvia_diameter, microvia_drill, clearance, min_hole_clearance):
+        self.track_width = to_grid_coord_round_up(track_width)
+        self.microvia_diameter = to_grid_coord_round_up(microvia_diameter)
+        self.microvia_drill = to_grid_coord_round_up(microvia_drill)
+        self.clearance_with_track = to_grid_coord_round_down(clearance + track_width / 2)
+        if clearance < min_hole_clearance:
+            self.clearance_with_microvia = to_grid_coord_round_down(min_hole_clearance + microvia_drill / 2)
+        else:
+            self.clearance_with_microvia = to_grid_coord_round_down(clearance + microvia_drill / 2)
 
 
-def to_grid_coord(coord_i):
+def to_grid_coord_round_down(coord_i):
     return int(coord_i * 3 / 0.25)  # 0.25
+
+
+def to_grid_coord_round_up(coord_i):
+    return math.ceil(coord_i * 3 / 0.25)  # 0.25
 
 
 class GridParameters:
@@ -103,8 +111,8 @@ class GridParameters:
                 dy = pad.position.Y * math.cos(theta) - pad.position.X * math.sin(theta)
                 x = footprint.position.X + dx
                 y = footprint.position.Y + dy
-                pad_pos = [to_grid_coord(x - self.dia_pos_0[0]),
-                           to_grid_coord(y - self.dia_pos_0[1]),
+                pad_pos = [to_grid_coord_round_down(x - self.dia_pos_0[0]),
+                           to_grid_coord_round_down(y - self.dia_pos_0[1]),
                            layers[footprint.layer]]
                 if pad.position.angle is None:
                     alpha = 0
@@ -112,16 +120,17 @@ class GridParameters:
                     alpha = pad.position.angle * math.pi / 180
                 size_x = pad.size.X * math.cos(alpha) + pad.size.Y * math.sin(alpha)
                 size_y = pad.size.Y * math.cos(alpha) - pad.size.X * math.sin(alpha)
-                pad_size = [to_grid_coord(abs(size_x)), to_grid_coord(abs(size_y))]
+                pad_size = [to_grid_coord_round_up(abs(size_x)), to_grid_coord_round_up(abs(size_y))]
+                pad_shape = pad.shape
                 if pad.net:
-                    board_pad = Pad(pad_pos, footprint.layer, pad_size, pad.type, pad.net.number)
+                    board_pad = Pad(pad_pos, footprint.layer, pad_shape, pad_size, pad.type, pad.net.number)
                     net_list[pad.net.number].padList.append(board_pad)
                 else:
-                    board_pad = Pad(pad_pos, footprint.layer, pad_size, pad.type, None)
+                    board_pad = Pad(pad_pos, footprint.layer, pad_shape, pad_size, pad.type, None)
                     self.pad_obstacles.append(board_pad)
 
-        self.gridSize = [to_grid_coord(self.dia_pos_1[0] - self.dia_pos_0[0]),
-                         to_grid_coord(self.dia_pos_1[1] - self.dia_pos_0[1]),
+        self.gridSize = [to_grid_coord_round_down(self.dia_pos_1[0] - self.dia_pos_0[0]),
+                         to_grid_coord_round_down(self.dia_pos_1[1] - self.dia_pos_0[1]),
                          len(layers)]  # grid size
         self.layers = layers_
         self.grLines = boundary_list
@@ -132,14 +141,15 @@ class GridParameters:
             self.netClass[net_class] = NetClass(self.netClassReal[net_class].track_width,
                                                 self.netClassReal[net_class].microvia_diameter,
                                                 self.netClassReal[net_class].microvia_drill,
-                                                self.netClassReal[net_class].clearance)
+                                                self.netClassReal[net_class].clearance,
+                                                project.board.design_setting.rules.min_hole_clearance)
         self.netList = net_list
 
         board.to_file()
 
     def to_real_coord(self, grid_coord):
-        grid_x = grid_coord[0] / 3 * 0.25
-        grid_y = grid_coord[1] / 3 * 0.25
+        grid_x = grid_coord[0] / 3 * 0.25  # 0.25
+        grid_y = grid_coord[1] / 3 * 0.25  # 0.25
         x = self.dia_pos_0[0] + grid_x
         y = self.dia_pos_0[1] + grid_y
         layer = self.layers[grid_coord[2]]

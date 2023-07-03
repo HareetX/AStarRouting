@@ -1,6 +1,7 @@
 import argparse
 import copy
 import heapq
+import math
 import os
 import random
 import time
@@ -11,7 +12,7 @@ import PlotDraw
 from GridEnvironment import GridEnv
 from KicadParser import grid_parameters
 # from ProblemParser import grid_parameters
-from utils import diagonal_distance, circle_space, rect_space
+from utils import diagonal_distance_3d, circle_space, rect_space, diagonal_distance_2d
 from RouteEvaluation import route_length, via_amount, min_via_amount
 
 
@@ -34,15 +35,18 @@ class PriorityQueue:
 
 
 class Item:
-    def __init__(self, cur_pos, end_pos, end_pos_set, g_score, route_cost, parent):
+    def __init__(self, cur_pos, start_pos, start_pos_set, end_pos, end_pos_set, g_score, route_cost, parent):
         self.cur_pos = cur_pos
+        self.start_pos = start_pos
+        self.start_pos_set = start_pos_set
         self.end_pos = end_pos
         self.end_pos_set = end_pos_set
 
-        self.h_score = diagonal_distance(cur_pos, end_pos)
+        self.h_score = diagonal_distance_3d(cur_pos, end_pos)
         self.g_score = g_score + route_cost
 
         self.f_score = self.g_score + self.h_score
+        self.min_f_score = diagonal_distance_3d(start_pos, end_pos)
 
         self.parent = parent
 
@@ -63,8 +67,13 @@ class Item:
             x_parent, y_parent, z_parent = self.parent.cur_pos
             direct = [x - x_parent, y - y_parent, z - z_parent]
         neighbors = []
+        # For Debug
+        # if self.cur_pos == [204, 233, 0] or self.cur_pos == [202, 233, 0] or self.cur_pos == [203, 234, 0] or \
+        #         self.cur_pos == [203, 232, 0] or self.cur_pos == [202, 232, 0] or self.cur_pos == [202, 234, 0] or \
+        #         self.cur_pos == [204, 232, 0] or self.cur_pos == [204, 234, 0] or self.cur_pos == [203, 233, 1]:
+        #     print('breakpoint')
         # go to the east
-        if x < grid_size[0] - 1:
+        if x < grid_size[0] - 1 and direct != [-1, 0, 0]:
             pos = [x + 1, y, z]
             g_cost = 0
             if direct is not None and direct != [1, 0, 0]:
@@ -84,10 +93,10 @@ class Item:
                 g_cost += calculate_space(pos, electrical_width[0], occupied_msg)  # TODO
             # elif pos != self.end_pos and str(pos) in occupied_msg:
             #     g_cost += occupied_msg[str(pos)]
-            item = Item(pos, self.end_pos, self.end_pos_set, self.g_score, g_cost + 1, self)
+            item = Item(pos, self.start_pos, self.start_pos_set, self.end_pos, self.end_pos_set, self.g_score, g_cost + 1, self)
             neighbors.append(item)
         # go to the east-north
-        if x < grid_size[0] - 1 and y < grid_size[1] - 1:
+        if x < grid_size[0] - 1 and y < grid_size[1] - 1 and direct != [-1, -1, 0]:
             pos = [x + 1, y + 1, z]
             g_cost = 0
             if direct is not None and direct != [1, 1, 0]:
@@ -107,10 +116,10 @@ class Item:
                 g_cost += calculate_space(pos, electrical_width[0], occupied_msg)  # TODO
             # elif pos != self.end_pos and str(pos) in occupied_msg:
             #     g_cost += occupied_msg[str(pos)]
-            item = Item(pos, self.end_pos, self.end_pos_set, self.g_score, g_cost + 1.414, self)
+            item = Item(pos, self.start_pos, self.start_pos_set, self.end_pos, self.end_pos_set, self.g_score, g_cost + 1.414, self)
             neighbors.append(item)
         # go to the north
-        if y < grid_size[1] - 1:
+        if y < grid_size[1] - 1 and direct != [0, -1, 0]:
             pos = [x, y + 1, z]
             g_cost = 0
             if direct is not None and direct != [0, 1, 0]:
@@ -130,10 +139,10 @@ class Item:
                 g_cost += calculate_space(pos, electrical_width[0], occupied_msg)  # TODO
             # elif pos != self.end_pos and str(pos) in occupied_msg:
             #     g_cost += occupied_msg[str(pos)]
-            item = Item(pos, self.end_pos, self.end_pos_set, self.g_score, g_cost + 1, self)
+            item = Item(pos, self.start_pos, self.start_pos_set, self.end_pos, self.end_pos_set, self.g_score, g_cost + 1, self)
             neighbors.append(item)
         # go to the west-north
-        if x > 0 and y < grid_size[1] - 1:
+        if x > 0 and y < grid_size[1] - 1 and direct != [1, -1, 0]:
             pos = [x - 1, y + 1, z]
             g_cost = 0
             if direct is not None and direct != [-1, 1, 0]:
@@ -153,10 +162,10 @@ class Item:
                 g_cost += calculate_space(pos, electrical_width[0], occupied_msg)  # TODO
             # elif pos != self.end_pos and str(pos) in occupied_msg:
             #     g_cost += occupied_msg[str(pos)]
-            item = Item(pos, self.end_pos, self.end_pos_set, self.g_score, g_cost + 1.414, self)
+            item = Item(pos, self.start_pos, self.start_pos_set, self.end_pos, self.end_pos_set, self.g_score, g_cost + 1.414, self)
             neighbors.append(item)
         # go to the west
-        if x > 0:
+        if x > 0 and direct != [1, 0, 0]:
             pos = [x - 1, y, z]
             g_cost = 0
             if direct is not None and direct != [-1, 0, 0]:
@@ -176,10 +185,10 @@ class Item:
                 g_cost += calculate_space(pos, electrical_width[0], occupied_msg)  # TODO
             # elif pos != self.end_pos and str(pos) in occupied_msg:
             #     g_cost += occupied_msg[str(pos)]
-            item = Item(pos, self.end_pos, self.end_pos_set, self.g_score, g_cost + 1, self)
+            item = Item(pos, self.start_pos, self.start_pos_set, self.end_pos, self.end_pos_set, self.g_score, g_cost + 1, self)
             neighbors.append(item)
         # go to the west-south
-        if x > 0 and y > 0:
+        if x > 0 and y > 0 and direct != [1, 1, 0]:
             pos = [x - 1, y - 1, z]
             g_cost = 0
             if direct is not None and direct != [-1, -1, 0]:
@@ -199,10 +208,10 @@ class Item:
                 g_cost += calculate_space(pos, electrical_width[0], occupied_msg)  # TODO
             # elif pos != self.end_pos and str(pos) in occupied_msg:
             #     g_cost += occupied_msg[str(pos)]
-            item = Item(pos, self.end_pos, self.end_pos_set, self.g_score, g_cost + 1.414, self)
+            item = Item(pos, self.start_pos, self.start_pos_set, self.end_pos, self.end_pos_set, self.g_score, g_cost + 1.414, self)
             neighbors.append(item)
         # go to the south
-        if y > 0:
+        if y > 0 and direct != [0, 1, 0]:
             pos = [x, y - 1, z]
             g_cost = 0
             if direct is not None and direct != [0, -1, 0]:
@@ -222,10 +231,10 @@ class Item:
                 g_cost += calculate_space(pos, electrical_width[0], occupied_msg)  # TODO
             # elif pos != self.end_pos and str(pos) in occupied_msg:
             #     g_cost += occupied_msg[str(pos)]
-            item = Item(pos, self.end_pos, self.end_pos_set, self.g_score, g_cost + 1, self)
+            item = Item(pos, self.start_pos, self.start_pos_set, self.end_pos, self.end_pos_set, self.g_score, g_cost + 1, self)
             neighbors.append(item)
         # go to the east-south
-        if x < grid_size[0] - 1 and y > 0:
+        if x < grid_size[0] - 1 and y > 0 and direct != [-1, 1, 0]:
             pos = [x + 1, y - 1, z]
             g_cost = 0
             if direct is not None and direct != [1, -1, 0]:
@@ -245,11 +254,11 @@ class Item:
                 g_cost += calculate_space(pos, electrical_width[0], occupied_msg)  # TODO
             # elif pos != self.end_pos and str(pos) in occupied_msg:
             #     g_cost += occupied_msg[str(pos)]
-            item = Item(pos, self.end_pos, self.end_pos_set, self.g_score, g_cost + 1.414, self)
+            item = Item(pos, self.start_pos, self.start_pos_set, self.end_pos, self.end_pos_set, self.g_score, g_cost + 1.414, self)
             neighbors.append(item)
 
         # go to upside through a via
-        if z < grid_size[2] - 1:
+        if z < grid_size[2] - 1 and direct != [0, 0, -1]:
             pos = [x, y, z + 1]
             g_cost = 9  # go through a via need a high cost
             if str(pos) in net_pin_set:
@@ -264,15 +273,27 @@ class Item:
             #         space_cost_graph.extend_grid(pos, track_space_cost, via_space_cost)
             #         space_cost = via_space_cost
             #     g_cost += space_cost
-            elif str(pos) not in self.end_pos_set:
-                g_cost += calculate_space(pos, electrical_width[1], occupied_msg)
-                g_cost += calculate_space(self.cur_pos, electrical_width[1], occupied_msg)
+
+            # elif str(pos) not in self.end_pos_set:
+            #     g_cost += calculate_space(pos, electrical_width[1], occupied_msg)
+            #     g_cost += calculate_space(self.cur_pos, electrical_width[1], occupied_msg)
+
+            g_cost += calculate_space(pos, electrical_width[1], occupied_msg)
+            g_cost += calculate_space(self.cur_pos, electrical_width[1], occupied_msg)
+
+            distance_1 = diagonal_distance_2d(self.cur_pos, self.end_pos)
+            distance_2 = diagonal_distance_2d(self.cur_pos, self.start_pos)
+            via_distance_1 = 2 * math.sqrt(len(self.end_pos_set))
+            via_distance_2 = math.sqrt(len(self.start_pos_set))
+            if distance_1 < via_distance_1 or distance_2 < via_distance_2:
+                g_cost += 1000
+
             # elif pos != self.end_pos and str(pos) in occupied_msg:
             #     g_cost = occupied_msg[str(pos)]
-            item = Item(pos, self.end_pos, self.end_pos_set, self.g_score, g_cost + 1, self)
+            item = Item(pos, self.start_pos, self.start_pos_set, self.end_pos, self.end_pos_set, self.g_score, g_cost + 1, self)
             neighbors.append(item)
         # go to downside through a via
-        if z > 0:
+        if z > 0 and direct != [0, 0, 1]:
             pos = [x, y, z - 1]
             g_cost = 9  # go through a via need a high cost
             if str(pos) in net_pin_set:
@@ -287,12 +308,24 @@ class Item:
             #         space_cost_graph.extend_grid(pos, track_space_cost, via_space_cost)
             #         space_cost = via_space_cost
             #     g_cost += space_cost
-            elif str(pos) not in self.end_pos_set:
-                g_cost += calculate_space(pos, electrical_width[1], occupied_msg)
-                g_cost += calculate_space(self.cur_pos, electrical_width[1], occupied_msg)
+
+            # elif str(pos) not in self.end_pos_set:
+            #     g_cost += calculate_space(pos, electrical_width[1], occupied_msg)
+            #     g_cost += calculate_space(self.cur_pos, electrical_width[1], occupied_msg)
+
+            g_cost += calculate_space(pos, electrical_width[1], occupied_msg)
+            g_cost += calculate_space(self.cur_pos, electrical_width[1], occupied_msg)
+
+            distance_1 = diagonal_distance_2d(self.cur_pos, self.end_pos)
+            distance_2 = diagonal_distance_2d(self.cur_pos, self.start_pos)
+            via_distance_1 = 2 * math.sqrt(len(self.end_pos_set))
+            via_distance_2 = math.sqrt(len(self.start_pos_set))
+            if distance_1 < via_distance_1 or distance_2 < via_distance_2:
+                g_cost += 1000
+
             # elif pos != self.end_pos and str(pos) in occupied_msg:
             #     g_cost = occupied_msg[str(pos)]
-            item = Item(pos, self.end_pos, self.end_pos_set, self.g_score, g_cost + 1, self)
+            item = Item(pos, self.start_pos, self.start_pos_set, self.end_pos, self.end_pos_set, self.g_score, g_cost + 1, self)
             neighbors.append(item)
 
         return neighbors
@@ -507,22 +540,28 @@ def a_star_route(start, end, end_set, occupied_msg, electrical_width, net_pin_se
 
     for pos in start:
         start_pos = list(int(char) for char in pos.strip('[]').split(', '))
-        start_item = Item(start_pos, end, end_set, 0.0, 0.0, None)
+        start_item = Item(start_pos, start_pos, start, end, end_set, 0.0, 0.0, None)
         heapq.heappush(open_set, start_item)
         open_set_graph[start_pos[0]][start_pos[1]][start_pos[2]] = start_item
     # start_item = Item(start, end, 0.0, 0.0, None)
     # heapq.heappush(open_set, start_item)
 
     # For Debug
-    # debug_log = open('debug.txt', 'w', encoding="utf-8")
+    debug_log = open('debug.txt', 'w', encoding="utf-8")
     while open_set:
         cur_item = heapq.heappop(open_set)
         # For Debug
-        # if cur_item.cur_pos == [252, 270, 1]:
+        # if cur_item.cur_pos == [203, 233, 0]:
         #     print('breakpoint')
-        # print("cur_pos = {}".format(cur_item.cur_pos), file=debug_log)
-        # print("route = {}".format(generate_path(cur_item)), file=debug_log)
-        if str(cur_item.cur_pos) in end_set:
+        print("cur_pos = {}".format(cur_item.cur_pos), file=debug_log)
+        print("route = {}".format(generate_path(cur_item)), file=debug_log)
+        # For Debug
+        # if cur_item.cur_pos[2] == 1:
+        #     print('breakpoint bottom layer')
+        # if cur_item.cur_pos[2] == 0:
+        #     print('breakpoint top layer')
+
+        if str(cur_item.cur_pos) in end_set or cur_item.f_score > 1000 + cur_item.min_f_score:
             return generate_path(cur_item)
         else:
             # closed_set.append(cur_item)
@@ -729,9 +768,9 @@ def solver_arguments():
     parser.add_argument('--episode', type=int, dest='episode', default=1)
     parser.add_argument('--log', type=str, dest='log', default="log.txt")
     parser.add_argument('--trace', type=bool, dest='trace', default=True)
-    parser.add_argument('--kicad_pcb', type=str, dest='kicad_pcb', default="bench4/bm4.unrouted.kicad_pcb")
-    parser.add_argument('--kicad_pro', type=str, dest='kicad_pro', default="bench4/bm4.unrouted.kicad_pro")
-    parser.add_argument('--save_file', type=str, dest='save_file', default="bench4/bm4.routed.kicad_pcb")
+    parser.add_argument('--kicad_pcb', type=str, dest='kicad_pcb', default="bench2/bm2.unrouted.kicad_pcb")
+    parser.add_argument('--kicad_pro', type=str, dest='kicad_pro', default="bench2/bm2.unrouted.kicad_pro")
+    parser.add_argument('--save_file', type=str, dest='save_file', default="bench2/bm2.routed.kicad_pcb")
 
     return parser.parse_args()
 

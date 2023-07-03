@@ -4,6 +4,7 @@ from typing import Optional
 
 import re
 
+from BoardSetting import BoardSetting
 from NetSetting import NetSetting
 
 dbg = False
@@ -55,6 +56,9 @@ class KiCadPro:
     netSetting: str = ""
     """The ``netSetting`` token defines the net and netClass"""
 
+    board: str = ""
+    """The ``boardSetting`` token defines the design rules"""
+
     def from_sexpr(self, exp: list):
         """Convert the given S-Expresstion into a Board object
 
@@ -79,6 +83,8 @@ class KiCadPro:
             item = exp[i]
             if item == '"net_settings":':
                 object.netSetting = NetSetting().from_sexpr(exp[i+1])
+            elif item == '"board":':
+                object.board = BoardSetting().from_sexpr(exp[i+1])
 
         return object
 

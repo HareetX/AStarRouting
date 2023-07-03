@@ -4,7 +4,7 @@ import random
 
 import numpy as np
 
-from utils import diagonal_distance
+from utils import diagonal_distance_3d
 
 
 class GridEnv:
@@ -53,7 +53,7 @@ class GridEnv:
         width_list = []
         for i in range(self.num_net):
             net_info = self.grid_parameter.netList[i + 1]
-            if i > 4:  # For Debug
+            if i > 32:  # For Debug
                 print(net_info.netName)
                 netlist.append([])
                 continue
@@ -79,7 +79,7 @@ class GridEnv:
         two_pin_nets_combo = []
         for i in range(self.num_net):
             netlist_len = len(netlist[i])
-            if i > 4:  # For Debug
+            if i > 32:  # For Debug
                 two_pin_net_nums.append(0)
                 continue
             two_pin_net_nums.append(netlist_len - 1)
@@ -87,7 +87,7 @@ class GridEnv:
                 for p in range(netlist_len - j - 1):
                     pin_start = netlist[i][j]
                     pin_end = netlist[i][p + j + 1]
-                    distance = diagonal_distance(pin_start, pin_end)
+                    distance = diagonal_distance_3d(pin_start, pin_end)
                     two_pin_set.append(([pin_start, pin_end], distance))
             two_pin_set.sort(key=lambda x: x[1])
             connected_component = []
