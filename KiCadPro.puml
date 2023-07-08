@@ -1,0 +1,27 @@
+@startuml
+
+class KiCadPro {
+    string filePath
+
+    BoardSetting board
+    NetSetting net_setting
+}
+
+class BoardSetting {
+    DesignSetting design_setting
+}
+
+class DesignSetting {
+    DesignRules rules
+}
+
+class NetSetting {
+    dict [str, NetClassReal] classes
+    dict [str, str] netClassPatterns
+}
+
+BoardSetting o-left- DesignSetting
+KiCadPro o-left- BoardSetting
+KiCadPro o-right- NetSetting
+
+@enduml

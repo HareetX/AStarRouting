@@ -4,7 +4,7 @@ import random
 
 import numpy as np
 
-from utils import diagonal_distance_3d
+from utils import diagonal_distance_3d, rect_space, circle_space, circle_space_set, rect_space_set
 
 
 class GridEnv:
@@ -17,6 +17,7 @@ class GridEnv:
         # self.electric_width = 3
         self.wire_max_width = None
 
+        self.pad_size_array = []
         self.pin_hsize_array = []
         self.pin_grid_set = {}
 
@@ -53,10 +54,10 @@ class GridEnv:
         width_list = []
         for i in range(self.num_net):
             net_info = self.grid_parameter.netList[i + 1]
-            if i > 32:  # For Debug
-                print(net_info.netName)
-                netlist.append([])
-                continue
+            # if i > 4:  # For Debug
+            #     print(net_info.netName)
+            #     netlist.append([])
+            #     continue
             for j in range(len(net_info.padList)):
                 single_net_pins.append(net_info.padList[j].position)
             netlist.append(single_net_pins)
@@ -79,9 +80,9 @@ class GridEnv:
         two_pin_nets_combo = []
         for i in range(self.num_net):
             netlist_len = len(netlist[i])
-            if i > 32:  # For Debug
-                two_pin_net_nums.append(0)
-                continue
+            # if i > 4:  # For Debug
+            #     two_pin_net_nums.append(0)
+            #     continue
             two_pin_net_nums.append(netlist_len - 1)
             for j in range(netlist_len - 1):
                 for p in range(netlist_len - j - 1):
@@ -199,36 +200,22 @@ class GridEnv:
         # Set grid graph refer to boundary list
         # TODO
         for i in range(self.num_net):
+            pin_hsize_dict = []
             net_info = self.grid_parameter.netList[i + 1]
-            pin_hsize_list = []
+            pad_size_list = []
+            # pin_hsize_list = []
             for j in range(len(net_info.padList)):
                 pad = net_info.padList[j]
                 x_coord = pad.position[0]
                 y_coord = pad.position[1]
                 z_coord = pad.position[2]
 
+                pad_size_set = set([])
+                pin_set = set([])
                 pin_hsize_x = int(pad.size[0] / 2)
                 pin_hsize_y = int(pad.size[1] / 2)
-                pin_hsize_list.append([pin_hsize_x, pin_hsize_y, pad.type])
+                pin_hsize_dict.append([pin_hsize_x, pin_hsize_y, pad.shape])
 
-                if pin_hsize_x == pin_hsize_y:
-                    size_x_min = x_coord - int(pin_hsize_x * 0.707)
-                    size_x_max = x_coord + int(pin_hsize_x * 0.707) + 1
-                    size_y_min = y_coord - int(pin_hsize_y * 0.707)
-                    size_y_max = y_coord + int(pin_hsize_y * 0.707) + 1
-                else:
-                    size_x_min = x_coord - pin_hsize_x + 1
-                    size_x_max = x_coord + pin_hsize_x
-                    size_y_min = y_coord - pin_hsize_y + 1
-                    size_y_max = y_coord + pin_hsize_y
-
-                # pin_hsize_x += self.electric_width + self.wire_max_width  # TODO
-                # pin_hsize_y += self.electric_width + self.wire_max_width
-
-                x_min = x_coord - pin_hsize_x
-                x_max = x_coord + pin_hsize_x + 1
-                y_min = y_coord - pin_hsize_y
-                y_max = y_coord + pin_hsize_y + 1
                 if pad.type == 'thru_hole':
                     z_min = 0
                     z_max = self.grid_size[2]
@@ -237,38 +224,86 @@ class GridEnv:
                     z_min = z_coord
                     z_max = z_coord + 1
 
-                if x_min < 0:
-                    x_min = 0
-                if x_max > self.grid_size[0]:
-                    x_max = self.grid_size[0]
-                if y_min < 0:
-                    y_min = 0
-                if y_max > self.grid_size[1]:
-                    y_max = self.grid_size[1]
-                if z_min < 0:
-                    z_min = 0
-                if z_max > self.grid_size[2]:
-                    z_max = self.grid_size[2]
-                # Set the cost of the pin
-                for x_i in range(x_max - x_min):
-                    for y_i in range(y_max - y_min):
-                        for z_i in range(z_max - z_min):
-                            hide_pos = [x_min + x_i, y_min + y_i, z_min + z_i]
-                            if str(hide_pos) in occupied_dict:
-                                occupied_dict[str(hide_pos)] += 1000
-                            else:
-                                occupied_dict[str(hide_pos)] = 1000  # Large Enough
+                if pad.shape == 'circle':  # ? boundary detection ?
+                    for z_i in range(z_max - z_min):
+                        pad_size_set = pad_size_set | circle_space_set([x_coord, y_coord, z_i], pin_hsize_x)
+                        pin_set = pin_set | circle_space_set([x_coord, y_coord, z_i], pin_hsize_x - 1)
+                else:
+                    for z_i in range(z_max - z_min):
+                        pad_size_set = pad_size_set | rect_space_set([x_coord, y_coord, z_i], pin_hsize_x, pin_hsize_y)
+                        pin_set = pin_set | rect_space_set([x_coord, y_coord, z_i], pin_hsize_x - 1, pin_hsize_y - 1)
 
-                pin_set = set([])
-                for x_i in range(size_x_max - size_x_min):
-                    for y_i in range(size_y_max - size_y_min):
-                        for z_i in range(z_max - z_min):
-                            hide_pos = [size_x_min + x_i, size_y_min + y_i, z_min + z_i]
-                            pin_set.add(str(hide_pos))
+                pad_size_list.append(pad_size_set)
+                # pin_hsize_list.append([pin_hsize_x, pin_hsize_y, pad.type])
+
+                # if pin_hsize_x == pin_hsize_y:
+                #     size_x_min = x_coord - int(pin_hsize_x * 0.707)
+                #     size_x_max = x_coord + int(pin_hsize_x * 0.707) + 1
+                #     size_y_min = y_coord - int(pin_hsize_y * 0.707)
+                #     size_y_max = y_coord + int(pin_hsize_y * 0.707) + 1
+                # else:
+                #     size_x_min = x_coord - pin_hsize_x + 1
+                #     size_x_max = x_coord + pin_hsize_x
+                #     size_y_min = y_coord - pin_hsize_y + 1
+                #     size_y_max = y_coord + pin_hsize_y
+
+                # # pin_hsize_x += self.electric_width + self.wire_max_width  # TODO
+                # # pin_hsize_y += self.electric_width + self.wire_max_width
+
+                # x_min = x_coord - pin_hsize_x
+                # x_max = x_coord + pin_hsize_x + 1
+                # y_min = y_coord - pin_hsize_y
+                # y_max = y_coord + pin_hsize_y + 1
+                # if pad.type == 'thru_hole':
+                #     z_min = 0
+                #     z_max = self.grid_size[2]
+                # else:
+                #     # pad.type == 'smd'
+                #     z_min = z_coord
+                #     z_max = z_coord + 1
+
+                # if x_min < 0:
+                #     x_min = 0
+                # if x_max > self.grid_size[0]:
+                #     x_max = self.grid_size[0]
+                # if y_min < 0:
+                #     y_min = 0
+                # if y_max > self.grid_size[1]:
+                #     y_max = self.grid_size[1]
+                # if z_min < 0:
+                #     z_min = 0
+                # if z_max > self.grid_size[2]:
+                #     z_max = self.grid_size[2]
+                # Set the cost of the pin
+                for hide_pos in pad_size_set:
+                    if hide_pos in occupied_dict:
+                        occupied_dict[hide_pos] += 1000
+                    else:
+                        occupied_dict[hide_pos] = 1000  # Large Enough
+
+                # for x_i in range(x_max - x_min):
+                #     for y_i in range(y_max - y_min):
+                #         for z_i in range(z_max - z_min):
+                #             hide_pos = [x_min + x_i, y_min + y_i, z_min + z_i]
+                #             if str(hide_pos) in occupied_dict:
+                #                 occupied_dict[str(hide_pos)] += 1000
+                #             else:
+                #                 occupied_dict[str(hide_pos)] = 1000  # Large Enough
+
                 self.pin_grid_set[str(pad.position)] = pin_set
 
+                # pin_set = set([])
+                # for x_i in range(size_x_max - size_x_min):
+                #     for y_i in range(size_y_max - size_y_min):
+                #         for z_i in range(z_max - z_min):
+                #             hide_pos = [size_x_min + x_i, size_y_min + y_i, z_min + z_i]
+                #             pin_set.add(str(hide_pos))
+                # self.pin_grid_set[str(pad.position)] = pin_set
+
                 # occupied_dict[str(net_info[str(j + 1)])] = 1000  # Large Enough
-            self.pin_hsize_array.append(pin_hsize_list)
+            self.pin_hsize_array.append(pin_hsize_dict)
+            self.pad_size_array.append(pad_size_list)
+            # self.pin_hsize_array.append(pin_hsize_list)
 
         # Set obstacle
         for obs_pad in self.grid_parameter.pad_obstacles:
@@ -276,15 +311,12 @@ class GridEnv:
             y_coord = obs_pad.position[1]
             z_coord = obs_pad.position[2]
 
+            pad_size_set = set([])
             pin_hsize_x = int(obs_pad.size[0] / 2)
             pin_hsize_y = int(obs_pad.size[1] / 2)
             # pin_hsize_x = int(obs_pad.size[0] / 2) + self.electric_width + self.wire_max_width  # TODO
             # pin_hsize_y = int(obs_pad.size[1] / 2) + self.electric_width + self.wire_max_width
 
-            x_min = x_coord - pin_hsize_x
-            x_max = x_coord + pin_hsize_x + 1
-            y_min = y_coord - pin_hsize_y
-            y_max = y_coord + pin_hsize_y + 1
             if obs_pad.type == 'np_thru_hole' or obs_pad.type == 'thru_hole':
                 z_min = 0
                 z_max = self.grid_size[2]
@@ -293,67 +325,98 @@ class GridEnv:
                 z_min = z_coord
                 z_max = z_coord + 1
 
-            if x_min < 0:
-                x_min = 0
-            if x_max > self.grid_size[0]:
-                x_max = self.grid_size[0]
-            if y_min < 0:
-                y_min = 0
-            if y_max > self.grid_size[1]:
-                y_max = self.grid_size[1]
-            if z_min < 0:
-                z_min = 0
-            if z_max > self.grid_size[2]:
-                z_max = self.grid_size[2]
+            if obs_pad.shape == 'circle':  # ? boundary detection ?
+                for z_i in range(z_max - z_min):
+                    pad_size_set = pad_size_set | circle_space_set([x_coord, y_coord, z_i], pin_hsize_x)
+            else:
+                for z_i in range(z_max - z_min):
+                    pad_size_set = pad_size_set | rect_space_set([x_coord, y_coord, z_i], pin_hsize_x, pin_hsize_y)
+
+            # x_min = x_coord - pin_hsize_x
+            # x_max = x_coord + pin_hsize_x + 1
+            # y_min = y_coord - pin_hsize_y
+            # y_max = y_coord + pin_hsize_y + 1
+            # if obs_pad.type == 'np_thru_hole' or obs_pad.type == 'thru_hole':
+            #     z_min = 0
+            #     z_max = self.grid_size[2]
+            # else:
+            #     # pad.type == 'smd'
+            #     z_min = z_coord
+            #     z_max = z_coord + 1
+
+            # if x_min < 0:
+            #     x_min = 0
+            # if x_max > self.grid_size[0]:
+            #     x_max = self.grid_size[0]
+            # if y_min < 0:
+            #     y_min = 0
+            # if y_max > self.grid_size[1]:
+            #     y_max = self.grid_size[1]
+            # if z_min < 0:
+            #     z_min = 0
+            # if z_max > self.grid_size[2]:
+            #     z_max = self.grid_size[2]
             # Set the cost of the pin
-            for x_i in range(x_max - x_min):
-                for y_i in range(y_max - y_min):
-                    for z_i in range(z_max - z_min):
-                        hide_pos = [x_min + x_i, y_min + y_i, z_min + z_i]
-                        if str(hide_pos) in occupied_dict:
-                            occupied_dict[str(hide_pos)] += 1000
-                        else:
-                            occupied_dict[str(hide_pos)] = 1000  # Large Enough
+            for hide_pos in pad_size_set:
+                if hide_pos in occupied_dict:
+                    occupied_dict[hide_pos] += 1000
+                else:
+                    occupied_dict[hide_pos] = 1000  # Large Enough
+
+            # for x_i in range(x_max - x_min):
+            #     for y_i in range(y_max - y_min):
+            #         for z_i in range(z_max - z_min):
+            #             hide_pos = [x_min + x_i, y_min + y_i, z_min + z_i]
+            #             if str(hide_pos) in occupied_dict:
+            #                 occupied_dict[str(hide_pos)] += 1000
+            #             else:
+            #                 occupied_dict[str(hide_pos)] = 1000  # Large Enough
 
         return occupied_dict
 
-    def add_pin_effect(self, pin_x, pin_y, pin_z, pin_hsize):
-        pin_hsize_x, pin_hsize_y, pin_type = pin_hsize
-        # pin_hsize_x += self.electric_width + self.wire_max_width  # TODO
-        # pin_hsize_y += self.electric_width + self.wire_max_width
-        x_min = pin_x - pin_hsize_x
-        x_max = pin_x + pin_hsize_x + 1
-        y_min = pin_y - pin_hsize_y
-        y_max = pin_y + pin_hsize_y + 1
-        if pin_type == 'thru_hole':
-            z_min = 0
-            z_max = self.grid_size[2]
-        else:
-            # pad.type == 'smd'
-            z_min = pin_z
-            z_max = pin_z + 1
+    def add_pin_effect(self, pad_size_set):
+        # pin_hsize_x, pin_hsize_y, pin_type = pin_hsize
+        # # pin_hsize_x += self.electric_width + self.wire_max_width  # TODO
+        # # pin_hsize_y += self.electric_width + self.wire_max_width
+        # x_min = pin_x - pin_hsize_x
+        # x_max = pin_x + pin_hsize_x + 1
+        # y_min = pin_y - pin_hsize_y
+        # y_max = pin_y + pin_hsize_y + 1
+        # if pin_type == 'thru_hole':
+        #     z_min = 0
+        #     z_max = self.grid_size[2]
+        # else:
+        #     # pad.type == 'smd'
+        #     z_min = pin_z
+        #     z_max = pin_z + 1
 
-        if x_min < 0:
-            x_min = 0
-        if x_max > self.grid_size[0]:
-            x_max = self.grid_size[0]
-        if y_min < 0:
-            y_min = 0
-        if y_max > self.grid_size[1]:
-            y_max = self.grid_size[1]
-        if z_min < 0:
-            z_min = 0
-        if z_max > self.grid_size[2]:
-            z_max = self.grid_size[2]
+        # if x_min < 0:
+        #     x_min = 0
+        # if x_max > self.grid_size[0]:
+        #     x_max = self.grid_size[0]
+        # if y_min < 0:
+        #     y_min = 0
+        # if y_max > self.grid_size[1]:
+        #     y_max = self.grid_size[1]
+        # if z_min < 0:
+        #     z_min = 0
+        # if z_max > self.grid_size[2]:
+        #     z_max = self.grid_size[2]
         # Add the cost of the specified pin
-        for x_i in range(x_max - x_min):
-            for y_i in range(y_max - y_min):
-                for z_i in range(z_max - z_min):
-                    hide_pos = [x_min + x_i, y_min + y_i, z_min + z_i]
-                    if str(hide_pos) in self.occupied_coord:
-                        self.occupied_coord[str(hide_pos)] += 1000
-                    else:
-                        self.occupied_coord[str(hide_pos)] = 1000  # Large Enough
+        for hide_pos in pad_size_set:
+            if hide_pos in self.occupied_coord:
+                self.occupied_coord[hide_pos] += 1000
+            else:
+                self.occupied_coord[hide_pos] = 1000  # Large Enough
+
+        # for x_i in range(x_max - x_min):
+        #     for y_i in range(y_max - y_min):
+        #         for z_i in range(z_max - z_min):
+        #             hide_pos = [x_min + x_i, y_min + y_i, z_min + z_i]
+        #             if str(hide_pos) in self.occupied_coord:
+        #                 self.occupied_coord[str(hide_pos)] += 1000
+        #             else:
+        #                 self.occupied_coord[str(hide_pos)] = 1000  # Large Enough
 
     def add_pin_effect_v1(self, pin_x, pin_y, pin_z, pin_hsize):
         pin_hsize_x, pin_hsize_y, pin_type = pin_hsize
@@ -386,42 +449,47 @@ class GridEnv:
         # Add the cost of the specified pin
         self.grid_graph[x_min:x_max, y_min:y_max, z_min:z_max] += 1000
 
-    def eliminate_pin_effect(self, pin_x, pin_y, pin_z, pin_hsize):
-        pin_hsize_x, pin_hsize_y, pin_type = pin_hsize
-        # pin_hsize_x += self.electric_width + self.wire_max_width  # TODO
-        # pin_hsize_y += self.electric_width + self.wire_max_width
-        x_min = pin_x - pin_hsize_x
-        x_max = pin_x + pin_hsize_x + 1
-        y_min = pin_y - pin_hsize_y
-        y_max = pin_y + pin_hsize_y + 1
-        if pin_type == 'thru_hole':
-            z_min = 0
-            z_max = self.grid_size[2]
-        else:
-            # pad.type == 'smd'
-            z_min = pin_z
-            z_max = pin_z + 1
+    def eliminate_pin_effect(self, pad_size_set):
+        # pin_hsize_x, pin_hsize_y, pin_type = pin_hsize
+        # # pin_hsize_x += self.electric_width + self.wire_max_width  # TODO
+        # # pin_hsize_y += self.electric_width + self.wire_max_width
+        # x_min = pin_x - pin_hsize_x
+        # x_max = pin_x + pin_hsize_x + 1
+        # y_min = pin_y - pin_hsize_y
+        # y_max = pin_y + pin_hsize_y + 1
+        # if pin_type == 'thru_hole':
+        #     z_min = 0
+        #     z_max = self.grid_size[2]
+        # else:
+        #     # pad.type == 'smd'
+        #     z_min = pin_z
+        #     z_max = pin_z + 1
 
-        if x_min < 0:
-            x_min = 0
-        if x_max > self.grid_size[0]:
-            x_max = self.grid_size[0]
-        if y_min < 0:
-            y_min = 0
-        if y_max > self.grid_size[1]:
-            y_max = self.grid_size[1]
-        if z_min < 0:
-            z_min = 0
-        if z_max > self.grid_size[2]:
-            z_max = self.grid_size[2]
+        # if x_min < 0:
+        #     x_min = 0
+        # if x_max > self.grid_size[0]:
+        #     x_max = self.grid_size[0]
+        # if y_min < 0:
+        #     y_min = 0
+        # if y_max > self.grid_size[1]:
+        #     y_max = self.grid_size[1]
+        # if z_min < 0:
+        #     z_min = 0
+        # if z_max > self.grid_size[2]:
+        #     z_max = self.grid_size[2]
         # Del the cost of the specified pin
-        for x_i in range(x_max - x_min):
-            for y_i in range(y_max - y_min):
-                for z_i in range(z_max - z_min):
-                    hide_pos = [x_min + x_i, y_min + y_i, z_min + z_i]
-                    self.occupied_coord[str(hide_pos)] -= 1000
-                    if self.occupied_coord[str(hide_pos)] <= 0:
-                        del self.occupied_coord[str(hide_pos)]
+        for hide_pos in pad_size_set:
+            self.occupied_coord[hide_pos] -= 1000
+            if self.occupied_coord[hide_pos] <= 0:
+                del self.occupied_coord[str(hide_pos)]
+
+        # for x_i in range(x_max - x_min):
+        #     for y_i in range(y_max - y_min):
+        #         for z_i in range(z_max - z_min):
+        #             hide_pos = [x_min + x_i, y_min + y_i, z_min + z_i]
+        #             self.occupied_coord[str(hide_pos)] -= 1000
+        #             if self.occupied_coord[str(hide_pos)] <= 0:
+        #                 del self.occupied_coord[str(hide_pos)]
 
     def eliminate_pin_effect_v1(self, pin_x, pin_y, pin_z, pin_hsize):
         pin_hsize_x, pin_hsize_y, pin_type = pin_hsize
@@ -1026,6 +1094,7 @@ class GridEnv:
 
             for pos in single_route:
                 self.netPinSet.add(str(pos))
+            self.netPinSet = self.netPinSet | self.pin_grid_set[str(self.goal_pos)]
 
             self.netPinRoute.append(self.route)
 
@@ -1040,13 +1109,13 @@ class GridEnv:
                     self.route_combo.append(self.netPinRoute)
                     self.route_cost.append(self.cost)
 
-                i = 0
-                for pos in self.netlist[self.multiPinNet_i]:
-                    x_pos = pos[0]
-                    y_pos = pos[1]
-                    z_pos = pos[2]
-                    self.add_pin_effect(x_pos, y_pos, z_pos, self.pin_hsize_array[self.multiPinNet_i][i])
-                    i += 1
+                # i = 0
+                for i in range(len(self.netlist[self.multiPinNet_i])):
+                    # x_pos = pos[0]
+                    # y_pos = pos[1]
+                    # z_pos = pos[2]
+                    self.add_pin_effect(self.pad_size_array[self.multiPinNet_i][i])
+                    # i += 1
 
                 for route in self.netPinRoute:
                     distance = self.widthList[self.multiPinNet_i]
@@ -1189,22 +1258,28 @@ class GridEnv:
             self.multiPinNet_i += 1
             self.init_pos = None
             self.goal_pos = None
+            if self.multiPinNet_i >= len(self.twoPinNetCombo):
+                # all the two pin nets are routed
+                self.episode_cost.append(sum(self.route_cost))
+                self.episode += 1
+                self.multiPinNet_i = 0
             return
 
         print("NetCombo[{}][{}]".format(self.multiPinNet_i, self.twoPinNet_i))
         init_pos = self.twoPinNetCombo[self.multiPinNet_i][self.twoPinNet_i][0]
-        # self.init_pos = self.twoPinNetCombo[self.multiPinNet_i][self.twoPinNet_i][0]
-        self.init_pos = self.pin_grid_set[str(init_pos)]
+        self.init_pos = init_pos
+        # self.init_pos = self.pin_grid_set[str(init_pos)]
         self.goal_pos = self.twoPinNetCombo[self.multiPinNet_i][self.twoPinNet_i][1]
 
         if self.twoPinNet_i == 0:
-            i = 0
-            for pos in self.netlist[self.multiPinNet_i]:
-                x_pos = pos[0]
-                y_pos = pos[1]
-                z_pos = pos[2]
-                self.eliminate_pin_effect(x_pos, y_pos, z_pos, self.pin_hsize_array[self.multiPinNet_i][i])
-                i += 1
+            # i = 0
+            for i in range(len(self.netlist[self.multiPinNet_i])):
+                # x_pos = pos[0]
+                # y_pos = pos[1]
+                # z_pos = pos[2]
+                self.eliminate_pin_effect(self.pad_size_array[self.multiPinNet_i][i])
+                # i += 1
+            self.netPinSet = self.netPinSet | self.pin_grid_set[str(init_pos)]
 
     def reset_v1(self):
         self.route = []

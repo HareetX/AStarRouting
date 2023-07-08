@@ -6,7 +6,7 @@ class GridParameters {
     list [float] dia_pos1
 
     list [int] gridSize
-    dict layer
+    dict [str, int] layer
     list [Pad] pad_obstacles
     dict [str, NetClass] netClassList
     int netNum
@@ -35,6 +35,8 @@ class NetClass {
     int track_width
     int microvia_diameter
     int microvia_drill
+    int clearance_with_track
+    int clearance_with_microvia
 }
 
 Net "1" o-right- "n" Pad

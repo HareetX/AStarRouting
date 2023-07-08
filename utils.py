@@ -86,6 +86,28 @@ def circle_space(pos, radius) -> list:
     return pos_list
 
 
+def circle_space_set(pos, radius) -> set:
+    pos_set = {str(pos)}
+    for x_i in range(int(radius) + 1):
+        for y_i in range(int(radius) + 1):
+            if x_i == 0 and y_i == 0:
+                continue
+            if x_i ** 2 + y_i ** 2 <= radius ** 2:
+                if x_i == 0:
+                    pos_set.add(str([pos[0], pos[1] + y_i, pos[2]]))
+                    pos_set.add(str([pos[0], pos[1] - y_i, pos[2]]))
+                elif y_i == 0:
+                    pos_set.add(str([pos[0] + x_i, pos[1], pos[2]]))
+                    pos_set.add(str([pos[0] - x_i, pos[1], pos[2]]))
+                else:
+                    pos_set.add(str([pos[0] + x_i, pos[1] + y_i, pos[2]]))
+                    pos_set.add(str([pos[0] - x_i, pos[1] + y_i, pos[2]]))
+                    pos_set.add(str([pos[0] - x_i, pos[1] - y_i, pos[2]]))
+                    pos_set.add(str([pos[0] + x_i, pos[1] - y_i, pos[2]]))
+
+    return pos_set
+
+
 def rect_space(pos, a, b) -> list:
     x, y, z = pos
     a = int(a)
@@ -96,6 +118,38 @@ def rect_space(pos, a, b) -> list:
             pos_list.append([x - a + x_i, y - b + y_i, z])
 
     return pos_list
+
+
+def rect_space_set(pos, a, b) -> set:
+    x, y, z = pos
+    a = int(a)
+    b = int(b)
+    pos_set = set([])
+    for x_i in range(2 * a + 1):
+        for y_i in range(2 * b + 1):
+            pos_set.add(str([x - a + x_i, y - b + y_i, z]))
+
+    return pos_set
+
+
+def via_cost_function_1(x, critical):
+    if x > critical or x < -critical:
+        return 0
+    else:
+        return 1000
+
+
+def via_cost_function_2(x, alpha):
+    if x == 0:
+        return 1000
+    return alpha * 1 / x
+
+
+def via_cost_function_3(x, critical):
+    if x > critical or x < -critical:
+        return 1000 * critical**4 / abs(x**4)
+    else:
+        return 1000
 
 
 if __name__ == '__main__':

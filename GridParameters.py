@@ -29,7 +29,9 @@ class NetClass:
         self.track_width = to_grid_coord_round_up(track_width)
         self.microvia_diameter = to_grid_coord_round_up(microvia_diameter)
         self.microvia_drill = to_grid_coord_round_up(microvia_drill)
+
         self.clearance_with_track = to_grid_coord_round_down(clearance + track_width / 2)
+
         if clearance < min_hole_clearance:
             self.clearance_with_microvia = to_grid_coord_round_down(min_hole_clearance + microvia_drill / 2)
         else:
